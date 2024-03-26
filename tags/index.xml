@@ -6,12 +6,20 @@
         <description>Recent content in Tags on 0ZHan&#39;s Blog</description>
         <generator>Hugo -- gohugo.io</generator>
         <language>zh-cn</language>
-        <lastBuildDate>Sun, 07 May 2023 16:31:22 +0800</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" /><item>
-        <title>Python</title>
-        <link>/tags/python/python/</link>
-        <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+        <lastBuildDate>Tue, 26 Mar 2024 00:08:24 +0800</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" /><item>
+        <title>CTF</title>
+        <link>/tags/ctf/</link>
+        <pubDate>Tue, 26 Mar 2024 00:08:24 +0800</pubDate>
         
-        <guid>/tags/python/python/</guid>
+        <guid>/tags/ctf/</guid>
+        <description></description>
+        </item>
+        <item>
+        <title>Java安全</title>
+        <link>/tags/java%E5%AE%89%E5%85%A8/</link>
+        <pubDate>Tue, 26 Mar 2024 00:04:27 +0800</pubDate>
+        
+        <guid>/tags/java%E5%AE%89%E5%85%A8/</guid>
         <description></description>
         </item>
         
